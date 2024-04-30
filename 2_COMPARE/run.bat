@@ -1,0 +1,2 @@
+python compare.py
+pause
