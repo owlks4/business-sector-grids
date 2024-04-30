@@ -122,7 +122,7 @@ def get_full_address_from_feature(f):
     else:
         return None #no way we're matching with a feature that only has one address component
 
-def get_closest_feature_match(row, postcode_similarity_threshold, banned_features):
+def get_closest_feature_match(row, postcode_leeway, banned_features):
     best_scorer = None
     best_score = 0
     
@@ -143,12 +143,12 @@ def get_closest_feature_match(row, postcode_similarity_threshold, banned_feature
     address_we_want_to_find = row[address_column_index]
     
     for f in list:      #compare its address to each feature in the massive Birmingham OSM
-        if postcode_similarity_threshold > 0:
-            feature_postcode = f.get("properties").get("addr:postcode")
-            if feature_postcode == None:
-                continue
-            if get_string_similarity(feature_postcode, row[postcode_column_index]) < postcode_similarity_threshold:
-                continue
+        feature_postcode = f.get("properties").get("addr:postcode")
+        if feature_postcode == None:
+            continue
+        row_postcode = row[postcode_column_index]
+        if not feature_postcode[0:len(feature_postcode)-postcode_leeway] == row_postcode[0:len(row_postcode)-postcode_leeway]:
+            continue
         feature_full_addr = get_full_address_from_feature(f)
         if feature_full_addr == None:
             continue
@@ -235,10 +235,10 @@ for row in rows:    #for each row in the companies house data
         best_scorer = address_cache[row[address_column_index]]
         best_score = 1        
     else:
-        [best_scorer, best_score] = get_closest_feature_match(row, 1, [])
+        [best_scorer, best_score] = get_closest_feature_match(row, 0, [])
 
         if best_scorer == None:
-            [best_scorer, best_score] = get_closest_feature_match(row, 0.85, [])
+            [best_scorer, best_score] = get_closest_feature_match(row, 1, [])
         
         if best_scorer == None:
             print("Couldn't find any matches within the postcode...")
