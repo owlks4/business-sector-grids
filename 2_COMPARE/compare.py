@@ -143,10 +143,10 @@ def get_closest_feature_match(row, postcode_leeway, banned_features):
     address_we_want_to_find = row[address_column_index]
     
     for f in list:      #compare its address to each feature in the massive Birmingham OSM
-        feature_postcode = f.get("properties").get("addr:postcode")
+        feature_postcode = f.get("properties").get("addr:postcode").upper()
         if feature_postcode == None:
             continue
-        row_postcode = row[postcode_column_index]
+        row_postcode = row[postcode_column_index].upper()
         if not feature_postcode[0:len(feature_postcode)-postcode_leeway] == row_postcode[0:len(row_postcode)-postcode_leeway]:
             continue
         feature_full_addr = get_full_address_from_feature(f)
@@ -174,6 +174,19 @@ postcode_column_index = rows[0].index("postcode")
 if "Latitude" in rows[0] or "Longitude" in rows[0]:
     print ("\nStopped early, because the input file already had the columns we were going to add using this program. If you're sure this is the file you want to be operating on, delete those columns from the csv with an external tool like Excel, then come back.")
     exit()
+
+output_name = "output_from_session_beginning_"+str(time.time())+".csv"
+output = open(output_name,"w")
+
+topline = ""
+
+for item in rows[0]:
+    topline += "\"" + item + "\","
+
+topline += "\n"
+
+output.write(topline)
+output.close()
 
 print("Loading addresses from OSM geojson... will take a few minutes...")
 
@@ -263,10 +276,56 @@ for row in rows:    #for each row in the companies house data
     
     address_cache[row[address_column_index]] = best_scorer
     
-    row.append("THE LATITUDE OF BEST SCORER")
-    row.append("THE LONGITUDE OF BEST SCORER")
+    if hasattr(best_scorer, 'Latitude'): # then we got it from nominatim, so process accordingly
+        row.append(best_scorer.get("Latitude"))
+        row.append(best_scorer.get("Longitude"))
+    else:                                # then we got it from the geojson, so process accordingly
+        latitude = 0
+        longitude = 0
+        count = 0
+        coords = row.get("geometry").get("coordinates")
+        if isinstance(coords[0], list):
+            # then there's a nested list
+            for L1 in coords:
+                if isinstance(L1[0], list): #then each item in L is ANOTHER list
+                    for L2 in coords:
+                        if isinstance(L2[0], list): #then each item in L is ANOTHER list
+                            for L3 in coords:
+                                if isinstance(L3[0], list): #then each item in L is ANOTHER list
+                                    print("FOUR STACKED LISTS??????? AWGHHHHH")
+                                else: #then each item in L is a coordinate pair
+                                    longitude += L3[0] #[sic]
+                                    latitude += L3[1] #[sic]
+                                    count += 1
+                        else: #then each item in L is a coordinate pair
+                            longitude += L2[0] #[sic]
+                            latitude += L2[1] #[sic]
+                            count += 1
+                else: #then each item in L is a coordinate pair
+                    longitude += L1[0] #[sic]
+                    latitude += L1[1] #[sic]
+                    count += 1
+            
+        else: #then it's just a point and only consists of coordinates (great!)
+            longitude = coords[0] #[sic]
+            latitude = coords[1] #[sic]
+            count = 1
+
+        latitude /= count
+        longitude /= count
+            
+        row.append(latitude)
+        row.append(longitude)
     
     print("Row "+str(i-1)+" of "+rowslen+" complete")
     print(str((i-1)/len(rows) * 100) + "%")
-    print("REMEMBER, NEED TO ACTUALLY GET THE LATLONGS FROM THE FEATURES! THIS IS YOUR PER-ITERATION WARNING!")
 
+    output = open(output_name,"a")
+    s = ""
+
+    for item in row:
+        s += "\"" + item + "\","
+
+    s += "\n"
+    output.write(s)
+    output.close()
