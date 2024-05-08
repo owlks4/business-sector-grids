@@ -9,8 +9,10 @@ import time
 
 headers={"User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
 
-last_nominatim_request_time = 0
 NOMINATIM_COOLDOWN_TIME = 7
+STARTING_INDEX_IN_INPUT = 116540
+
+last_nominatim_request_time = 0
 
 def get_string_similarity(str1, str2):
     return SequenceMatcher(None, str1, str2).ratio()
@@ -35,16 +37,16 @@ def print_best_match_summary(best_scorer, original_address):
 def query_nominatim(address):
     json = construct_and_query_nominatim_url(address)
     
-    if json == None or len(json) > 0:
+    if json == None or len(json) == 0:
         # if it failed, then try again but with the address limited to begin with the house number
-        time.sleep(3)    
+        time.sleep(1)    
         json = construct_and_query_nominatim_url(isolate_address_beginning_with_house_number(address))
-        if json == None or len(json) > 0:    
+        if json == None or len(json) == 0:    
             # if it failed again, then try again but with just the postcode
-            time.sleep(3)
+            time.sleep(1)
             json = construct_and_query_nominatim_url(isolate_postcode(address))
     
-    if (not json == None) and len(json) > 0:
+    if not (json == None or len(json) == 0):
         return {"Latitude":json[0]["lat"], "Longitude":json[0]["lon"]}
     else:
         return {"Latitude":0, "Longitude":0}
@@ -119,7 +121,7 @@ def get_full_address_from_feature(f):
             output += item + " "
             num_items_used += 1
     
-    if num_items_used >= 2:    
+    if num_items_used >= 2:
         return output.strip()
     else:
         return None #no way we're matching with a feature that only has one address component
@@ -232,7 +234,12 @@ for row in rows:    #for each row in the companies house data
         row.append("Latitude")
         row.append("Longitude")
         print("Starting...")
-        continue    
+        continue
+
+    if i < STARTING_INDEX_IN_INPUT:        
+        i += 1
+        #print("Will not process "+row[address_column_index] + "("+str(i)+")")
+        continue
            
     i += 1
     
@@ -256,17 +263,18 @@ for row in rows:    #for each row in the companies house data
 
         if best_scorer == None:
             [best_scorer, best_score] = get_closest_feature_match(row, 1, [])
-        
-        if best_scorer == None:
-            print("Couldn't find any matches within the postcode...")
+            if best_scorer == None:
+                print("Couldn't find any matches within the postcode...")
         else:
             print_best_match_summary(get_full_address_from_feature(best_scorer), row[address_column_index])
 
-        if best_score < 0.62:             
+        if best_score < 0.62:
             print("Hmmm... best score was "+str(best_score)+". Asking nominatim as a fallback...")        
             best_scorer = query_nominatim(row[address_column_index])
             latitude = best_scorer.get("Latitude")
             longitude = best_scorer.get("Longitude")
+            print(best_scorer)
+            print("Here's what we got from nominatim: "+str(latitude) +" "+str(longitude)+" for "+row[address_column_index])
             row.append(latitude)
             row.append(longitude)
             address_cache[row[address_column_index]] = {"Latitude":latitude, "Longitude":longitude}
@@ -324,10 +332,10 @@ for row in rows:    #for each row in the companies house data
                 longitude = coords[0] #[sic]
                 latitude = coords[1] #[sic]
                 count = 1
-
+            
             latitude /= count
             longitude /= count
-            
+
             row.append(latitude)
             row.append(longitude)
             
@@ -340,6 +348,7 @@ for row in rows:    #for each row in the companies house data
     s = ""
 
     for item in row:
+        item_str_without_any_quotes = str(item).replace("\"","").replace(",","")
         s += "\"" + str(item) + "\","
 
     s += "\n"
