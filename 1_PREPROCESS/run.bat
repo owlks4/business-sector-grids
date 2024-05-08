@@ -1,2 +1,0 @@
-python cull_massive_geojson_to_only_places_with_at_least_one_addr_property.py
-pause

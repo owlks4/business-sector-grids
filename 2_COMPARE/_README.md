@@ -1,0 +1,1 @@
+The file 'input.csv' seen here should be obtained from Companies House using ch-spreadsheet-updater.

@@ -89,7 +89,7 @@ def process():
                                                                   "total_number_of_businesses_in_cluster":len(indices)}))
     
         feature_collection = FeatureCollection(features)
-        open("output.geojson","w").write(dumps(feature_collection, sort_keys=True))
+        open("output.geojson","w").write(dumps(feature_collection, sort_keys=True), encoding="utf-8")
 
 def get_uncompleted_points_of_same_sector_within_radius_of_this_BNG_and_its_neighbours(src_BNG,sector):
     global RADIUS_EASTING_NORTHING_ETC, rows, indices_that_have_yet_to_be_processed_for_each_sector
