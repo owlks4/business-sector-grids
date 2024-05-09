@@ -1,6 +1,4 @@
-import time
 import csv
-import copy
 import geojson
 from bng_latlon import WGS84toOSGB36, OSGB36toWGS84
 
@@ -26,7 +24,7 @@ while e < BNG_BOTTOMRIGHT_EASTING_NORTHING[0]:
         topleft_of_square_as_latlon = OSGB36toWGS84(e,n)
         bottomright_of_square_as_latlon = OSGB36toWGS84(e + GRID_INTERVAL_METRES, n - GRID_INTERVAL_METRES)
         grid_squares.append(geojson.Feature(geometry=geojson.Polygon([makeBoundsIntoGeoJsonFormatPolygon(topleft_of_square_as_latlon, bottomright_of_square_as_latlon)]),
-                                            properties={"TL":[e,n], "BR":[e+500,n-500]}))
+                                            properties={"TL":[e,n], "BR":[e+500,n-500], "sectorFrequencies":{}, "businesses_in_this_grid_square_str":"", "_modal_sector":None}))
         n -= GRID_INTERVAL_METRES
     e += GRID_INTERVAL_METRES
 
@@ -77,10 +75,12 @@ def process():
         if grid_square == None:
             print("Ignoring a business that didn't fit in any of the grid squares")
             print("It was at: "+latstr + " "+ lonstr)
-            print("But rest assured, we silently processed "+num_processed_since_last_skip+"other businesses in the meantime")
+            print("But rest assured, we silently processed "+str(num_processed_since_last_skip)+" other businesses in the meantime")
             num_processed_since_last_skip = 0
             print_percentage_complete(i,len(rows))
             continue
+    
+        grid_square.get("properties")["businesses_in_this_grid_square_str"] += row[company_name_column_index].replace("\"","")+ "; "
 
         num_processed_since_last_skip += 1
 
@@ -88,16 +88,43 @@ def process():
 
         for sector in row[broad_industry_column_index].strip().split(";"):
             sector = sector.strip().upper()
-            if not sector in unique_sectors_for_row:
+            if not sector in unique_sectors_for_row and not sector == "":
                 unique_sectors_for_row.append(sector)
 
         for j in range(len(unique_sectors_for_row)):
             sector = unique_sectors_for_row[j]
-            if not sector in grid_square.properties:
-                grid_square.properties[sector] = 1
+            if not sector in grid_square.get("properties"):
+                grid_square.get("properties").get("sectorFrequencies")[sector] = 1
             else:
-                grid_square.properties[sector] += 1
+                grid_square.get("properties").get("sectorFrequencies")[sector] += 1
 
-    open("OUTPUT_MODAL_GRID.geojson", mode="w").write(geojson.dumps(geojson.FeatureCollection(grid_squares)))
+
+    for grid_square in grid_squares:
+        biggest_freq = 0
+        sectorFrequencies = grid_square.get("properties").get("sectorFrequencies")
+
+        for sector in sectorFrequencies:
+            freq = sectorFrequencies[sector]
+            if freq > biggest_freq:
+                biggest_freq = freq
+        
+        mode = ""
+
+        for sector in sectorFrequencies:
+            grid_square.get("properties")[sector] = sectorFrequencies[sector]
+            freq = sectorFrequencies[sector]
+            if freq == biggest_freq:
+                mode += str(sector) + "; "
+
+        mode = mode.strip()
+        grid_square.get("properties")["_modal_sector"] = mode
+        grid_square.get("properties")["_freq_of_modal_sector"] = biggest_freq
+        grid_square.get("properties")["businesses_in_this_grid_square_str"] = grid_square.get("properties")["businesses_in_this_grid_square_str"].strip()
+        if hasattr(grid_square.get("properties"), "sectorFrequencies"):
+            delattr(grid_square.get("properties"),"sectorFrequencies")
+
+    open("OUTPUT_MODAL_GRID.geojson", mode="w", encoding="utf-8").write(geojson.dumps(geojson.FeatureCollection(grid_squares)))
+
+    print("Processing complete; OUTPUT_MODAL_GRID.geojson should contain the new output.")
 
 process()
