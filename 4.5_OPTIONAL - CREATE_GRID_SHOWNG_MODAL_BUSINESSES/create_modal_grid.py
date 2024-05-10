@@ -96,7 +96,7 @@ def process():
             if not sector in grid_square.properties.get("sectorFrequencies"):
                 grid_square.properties.get("sectorFrequencies")[sector] = 1
             else:
-                grid_square.properties.get("sectorFrequencies")[sector] += 1 #this cannot be made a +=, or it won't work
+                grid_square.properties.get("sectorFrequencies")[sector] += 1
 
 
     for grid_square in grid_squares:
