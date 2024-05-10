@@ -80,7 +80,7 @@ def process():
             print_percentage_complete(i,len(rows))
             continue
     
-        grid_square.get("properties")["businesses_in_this_grid_square_str"] += row[company_name_column_index].replace("\"","")+ "; "
+        grid_square.properties["businesses_in_this_grid_square_str"] += row[company_name_column_index].replace("\"","")+ "; "
 
         num_processed_since_last_skip += 1
 
@@ -93,15 +93,15 @@ def process():
 
         for j in range(len(unique_sectors_for_row)):
             sector = unique_sectors_for_row[j]
-            if not sector in grid_square.get("properties"):
-                grid_square.get("properties").get("sectorFrequencies")[sector] = 1
+            if not sector in grid_square.properties.get("sectorFrequencies"):
+                grid_square.properties.get("sectorFrequencies")[sector] = 1
             else:
-                grid_square.get("properties").get("sectorFrequencies")[sector] += 1
+                grid_square.properties.get("sectorFrequencies")[sector] += 1 #this cannot be made a +=, or it won't work
 
 
     for grid_square in grid_squares:
         biggest_freq = 0
-        sectorFrequencies = grid_square.get("properties").get("sectorFrequencies")
+        sectorFrequencies = grid_square.properties.get("sectorFrequencies")
 
         for sector in sectorFrequencies:
             freq = sectorFrequencies[sector]
@@ -111,19 +111,19 @@ def process():
         mode = ""
 
         for sector in sectorFrequencies:
-            grid_square.get("properties")[sector] = sectorFrequencies[sector]
+            grid_square.properties[sector] = sectorFrequencies[sector]
             freq = sectorFrequencies[sector]
             if freq == biggest_freq:
                 mode += str(sector) + "; "
 
         mode = mode.strip()
-        grid_square.get("properties")["_modal_sector"] = mode
-        grid_square.get("properties")["_freq_of_modal_sector"] = biggest_freq
-        grid_square.get("properties")["businesses_in_this_grid_square_str"] = grid_square.get("properties")["businesses_in_this_grid_square_str"].strip()
-        if hasattr(grid_square.get("properties"), "sectorFrequencies"):
-            delattr(grid_square.get("properties"),"sectorFrequencies")
+        grid_square.properties["_modal_sector"] = mode
+        grid_square.properties["_freq_of_modal_sector"] = biggest_freq
+        grid_square.properties["businesses_in_this_grid_square_str"] = grid_square.properties["businesses_in_this_grid_square_str"].strip()
+        if hasattr(grid_square.properties, "sectorFrequencies"):
+            delattr(grid_square.properties,"sectorFrequencies")
 
-    open("OUTPUT_MODAL_GRID.geojson", mode="w", encoding="utf-8").write(geojson.dumps(geojson.FeatureCollection(grid_squares)))
+    open("OUTPUT_MODAL_GRID_WITH_INTERVAL_"+str(GRID_INTERVAL_METRES)+".geojson", mode="w", encoding="utf-8").write(geojson.dumps(geojson.FeatureCollection(grid_squares)))
 
     print("Processing complete; OUTPUT_MODAL_GRID.geojson should contain the new output.")
 

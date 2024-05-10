@@ -10,7 +10,7 @@ import time
 headers={"User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
 
 NOMINATIM_COOLDOWN_TIME = 7
-STARTING_INDEX_IN_INPUT = 117266
+STARTING_INDEX_IN_INPUT = 129723
 
 last_nominatim_request_time = 0
 
