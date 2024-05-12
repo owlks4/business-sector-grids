@@ -31,7 +31,7 @@ def process():
         print("Now processing "+row[company_name_column_index])
 
         row.append(translate_sic_code(row[sic_code_column_index]))
-        row.append(translate_sector_prefix(row[sector_prefix_column_index]))
+        row.append(translate_sector_prefixes_of_sic_codes(row[sic_code_column_index])) # I've made this derive the sectors anew from the sic codes, despite there probably being a sector column in the source - this is because I've realised we need an extra digit of the SIC to adequately categorise the retail data - otherwise it generates clusters that are cumbersome in size and too vague to be useful
 
     with open('input.csv', newline='', encoding="utf-8", mode="w") as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
@@ -56,64 +56,80 @@ def translate_sic_code(sic_or_sics):
                 s += "Unknown"
     return s
 
-def translate_sector_prefix(prefix_or_prefixes):
-    splitInput = prefix_or_prefixes.replace("  "," ").split(" ")
+def translate_sector_prefixes_of_sic_codes(sic_or_sics): #parameter might look wrong, but it's actually correct! We're deriving the sectors from sic codes anew, so that we have enough to play with
+    splitInput = sic_or_sics.replace("  "," ").split(" ")
     first_loop = True
 
     s = ""
 
-    for prefix in splitInput:
-        if len(prefix.strip()) > 0 and not first_loop:
-            s += "; "
-        if len(prefix.strip()) > 0:
+    for code in splitInput:
+        if not first_loop:
+            s += "; "            
+        if len(code.strip()) > 0:
             first_loop = False
-            s += sector_lookup(prefix.strip())
+            sector = sector_lookup(code.strip())
+            s += sector
+
     return s
 
 def sector_lookup(sector_prefix_string):
-    prefixAsInt = int(sector_prefix_string.strip())
-
-    if prefixAsInt <= 3:
+    prefixAsFloat = float(sector_prefix_string.strip()) / 1000.0
+    
+    if prefixAsFloat <= 3.3:
         return "Agriculture, Forestry and Fishing"
-    elif prefixAsInt <= 9:
+    elif prefixAsFloat <= 9.9999:
         return "Mining and Quarrying"
-    elif prefixAsInt <= 33:
+    elif prefixAsFloat <= 33.3:
         return "Manufacturing"
-    elif prefixAsInt <= 35:
+    elif prefixAsFloat <= 35.4:
         return "Electricity, gas, steam and air conditioning supply"
-    elif prefixAsInt <= 39:
+    elif prefixAsFloat <= 39.9999:
         return "Water supply, sewerage, waste management and remediation activities"
-    elif prefixAsInt <= 43:
+    elif prefixAsFloat <= 43.9999:
         return "Construction"
-    elif prefixAsInt <= 47:
-        return "Wholesale and retail trade; repair of motor vehicles and motorcycles"
-    elif prefixAsInt <= 53:
+    elif prefixAsFloat <= 45.999:
+        return "Sale, maintenance and repair of motor vehicles"
+    elif prefixAsFloat <= 46.199:
+        return "Agents involved in the sale of goods"
+    elif prefixAsFloat <= 46.399:
+        return "Wholesale of food or animal products"
+    elif prefixAsFloat <= 46.699:
+        return "Wholesale of non-food items"
+    elif prefixAsFloat <= 46.799:
+        return "Wholesale of fuels, raw materials and chemicals"
+    elif prefixAsFloat <= 46.999:
+        return "Non-specialised wholesale trade"
+    elif prefixAsFloat <= 47.299:
+        return "Retail sale of food"
+    elif prefixAsFloat <= 47.9999:
+        return "Retail sale of non-food items"
+    elif prefixAsFloat <= 53.9999:
         return "Transport and storage"
-    elif prefixAsInt <= 56:
+    elif prefixAsFloat <= 56.9999:
         return "Accomodation and food service activities"
-    elif prefixAsInt <= 63:
+    elif prefixAsFloat <= 63.9999:
         return "Information and communication"
-    elif prefixAsInt <= 66:
+    elif prefixAsFloat <= 66.9999:
         return "Financial and insurance activities"
-    elif prefixAsInt <= 68:
+    elif prefixAsFloat <= 68.9999:
         return "Real estate activities"
-    elif prefixAsInt <= 75:
+    elif prefixAsFloat <= 75.9999:
         return "Professional, scientific and technical activities"
-    elif prefixAsInt <= 82:
+    elif prefixAsFloat <= 82.9999:
         return "Administrative and support service activities"
-    elif prefixAsInt <= 84:
+    elif prefixAsFloat <= 84.9999:
         return "Public administration and defence; compulsory social security"
-    elif prefixAsInt <= 85:
+    elif prefixAsFloat <= 85.9999:
         return "Education"
-    elif prefixAsInt <= 88:
+    elif prefixAsFloat <= 88.9999:
         return "Human health and social work activities"
-    elif prefixAsInt <= 93:
+    elif prefixAsFloat <= 93.9999:
         return "Arts, entertainment and recreation"
-    elif prefixAsInt <= 96:
+    elif prefixAsFloat <= 96.9999:
         return "Other service activities"
-    elif prefixAsInt <= 98:
+    elif prefixAsFloat <= 98.9999:
         return "Activities of households as employers; undifferentiated goods- and services-producing activities of households for own use"
-    elif prefixAsInt <= 99:
+    elif prefixAsFloat <= 99.9999:
         return "Activities of extraterritorial organisations and bodies"
 
 SIC_lookup = {
