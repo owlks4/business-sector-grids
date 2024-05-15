@@ -102,8 +102,9 @@ def process():
         row[company_name_column_index] = row[company_name_column_index].replace("\"","")
 
         businesses_all.append(row)
+        businessIndex = len(businesses_all) - 1;
 
-        grid_square.properties["Business names"].append(businesses_all.index(row))
+        grid_square.properties["Business names"].append(businessIndex)
 
         num_processed_since_last_skip += 1
 
@@ -122,9 +123,9 @@ def process():
             sectorID = unique_sectors_for_row[j]
 
             if sectorID in grid_square.properties.get("BusinessesBySector"):
-                grid_square.properties.get("BusinessesBySector")[sectorID].append(row[company_name_column_index])
+                grid_square.properties.get("BusinessesBySector")[sectorID].append(businessIndex)
             else:
-                grid_square.properties.get("BusinessesBySector")[sectorID] = [row[company_name_column_index]]
+                grid_square.properties.get("BusinessesBySector")[sectorID] = [businessIndex]
 
             if sectorID in grid_square.properties.get("sectorFrequencies"):
                 grid_square.properties.get("sectorFrequencies")[sectorID] += 1
@@ -160,17 +161,19 @@ def process():
                 "Modal sector(s)":modes,
                 "TL":tl_latlong,
                 "BR":br_latlong,
-                "Businesses":grid_square.properties["Business names"],
-                "BusinessesBySector":grid_square.properties["BusinessesBySector"]
+                "Businesses":grid_square.properties.get("Business names"),
+                "BusinessesBySector":grid_square.properties.get("BusinessesBySector")
                 }
             );
             grid_squares[grid_squares.index(grid_square)] = efficient_grid_square
 
+    print(grid_squares[0].properties.get("Businesses"))
+
     featureCollection = geojson.FeatureCollection(
         features = grid_squares,
         properties = {
-            "businesses_all":sorted(businesses_all, key=lambda business : business[company_name_column_index]),
-            "sectors_all":sorted(sectors_all)
+            "businesses_all":businesses_all, #must not sort these, because the indices are important
+            "sectors_all":sectors_all  #must not sort these, because the indices are important
             }
         );
 
