@@ -164,7 +164,7 @@ def process():
                 "Businesses":grid_square.properties.get("Business names"),
                 "BusinessesBySector":grid_square.properties.get("BusinessesBySector")
                 }
-            );
+            )
             grid_squares[grid_squares.index(grid_square)] = efficient_grid_square
 
     print(grid_squares[0].properties.get("Businesses"))
