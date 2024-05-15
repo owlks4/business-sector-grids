@@ -18,14 +18,18 @@ ENTIRE_BHAM_BOTTOMRIGHT_EASTING_NORTHING = [438836,260377]
 EASTBHAM_TOPLEFT_EASTING_NORTHING = [407884,295228]
 EASTBHAM_BOTTOMRIGHT_EASTING_NORTHING = [419948,276214]
 
-GRID_INTERVAL_METRES = 250
+GRID_INTERVAL_METRES = 1000
 
 #THE REAL ONE THAT IS ACTUALLY USED IN THE CALCULATION
-BNG_TOPLEFT_EASTING_NORTHING = EASTBHAM_TOPLEFT_EASTING_NORTHING
-BNG_BOTTOMRIGHT_EASTING_NORTHING = EASTBHAM_BOTTOMRIGHT_EASTING_NORTHING
+BNG_TOPLEFT_EASTING_NORTHING = ENTIRE_BHAM_TOPLEFT_EASTING_NORTHING
+BNG_BOTTOMRIGHT_EASTING_NORTHING = ENTIRE_BHAM_BOTTOMRIGHT_EASTING_NORTHING
 
 e = BNG_TOPLEFT_EASTING_NORTHING[0]
 
+IMPROVED_MODE = True
+
+businesses_all = []
+sectors_all = []
 grid_squares = []
 
 while e < BNG_BOTTOMRIGHT_EASTING_NORTHING[0]:
@@ -33,16 +37,20 @@ while e < BNG_BOTTOMRIGHT_EASTING_NORTHING[0]:
     while n >= BNG_BOTTOMRIGHT_EASTING_NORTHING[1]:
         topleft_of_square_as_latlon = OSGB36toWGS84(e,n)
         bottomright_of_square_as_latlon = OSGB36toWGS84(e + GRID_INTERVAL_METRES, n - GRID_INTERVAL_METRES)
+
+        propertiesObj = {"Position (TL)":[e,n], "Position (BR)":[e+GRID_INTERVAL_METRES,n-GRID_INTERVAL_METRES],
+                         "sectorFrequencies":{}, "Businesses":"", "_Modal sector":None, "Business names":[]}        
+
         grid_squares.append(geojson.Feature(geometry=geojson.Polygon([makeBoundsIntoGeoJsonFormatPolygon(topleft_of_square_as_latlon, bottomright_of_square_as_latlon)]),
-                                            properties={"TL":[e,n], "BR":[e+500,n-500], "sectorFrequencies":{}, "businesses_in_this_grid_square_str":"", "_modal_sector":None}))
+                                            properties=propertiesObj))
         n -= GRID_INTERVAL_METRES
     e += GRID_INTERVAL_METRES
 
 def get_my_grid_square(eastingNorthing):
 
     for grid_square in grid_squares:
-        if eastingNorthing[0] >= grid_square.properties.get("TL")[0] and eastingNorthing[0] < grid_square.properties.get("BR")[0]:
-            if eastingNorthing[1] <= grid_square.properties.get("TL")[1] and eastingNorthing[1] > grid_square.properties.get("BR")[1]:
+        if eastingNorthing[0] >= grid_square.properties.get("Position (TL)")[0] and eastingNorthing[0] < grid_square.properties.get("Position (BR)")[0]:
+            if eastingNorthing[1] <= grid_square.properties.get("Position (TL)")[1] and eastingNorthing[1] > grid_square.properties.get("Position (BR)")[1]:
                 return grid_square
     return None
 
@@ -66,7 +74,9 @@ def process():
     for i in range(len(rows)):
         if i == 0: #don't process header
             continue
+        
         row = rows[i]
+
 
         if "\"" in row[company_name_column_index]:
             print("WARNING: The company name in this row had a double quotation character in it. If you receive an error immediately after seeing this message, this is probably why - as it runs a high risk of throwing the columns of this csv row out of sync.")
@@ -89,25 +99,38 @@ def process():
             num_processed_since_last_skip = 0
             print_percentage_complete(i,len(rows))
             continue
-    
-        grid_square.properties["businesses_in_this_grid_square_str"] += row[company_name_column_index].replace("\"","")+ "; "
+
+        row[company_name_column_index] = row[company_name_column_index].replace("\"","")
+
+        businesses_all.append(row)
+
+        grid_square.properties["Business names"].append(row[company_name_column_index])
 
         num_processed_since_last_skip += 1
 
         unique_sectors_for_row = []
 
         for sector in row[broad_industry_column_index].strip().split(";"):
-            sector = sector.strip().upper()
-            if not sector in unique_sectors_for_row and not sector == "":
-                unique_sectors_for_row.append(sector)
+            if not sector == "":
+                sector = sector.strip().upper()         
+                if not sector in sectors_all:
+                    sectors_all.append(sector)
+                if not sector in unique_sectors_for_row:
+                    unique_sectors_for_row.append(sector)
 
         for j in range(len(unique_sectors_for_row)):
             sector = unique_sectors_for_row[j]
+
+            business_string_list_key = "Businesses with sector "+sector
+            if business_string_list_key in grid_square.properties:
+                grid_square.properties[business_string_list_key] += row[company_name_column_index]+ "; "
+            else:
+                grid_square.properties[business_string_list_key] = row[company_name_column_index].replace("\"","")+ "; "
+
             if not sector in grid_square.properties.get("sectorFrequencies"):
                 grid_square.properties.get("sectorFrequencies")[sector] = 1
             else:
                 grid_square.properties.get("sectorFrequencies")[sector] += 1
-
 
     for grid_square in grid_squares:
         biggest_freq = 0
@@ -118,22 +141,34 @@ def process():
             if freq > biggest_freq:
                 biggest_freq = freq
         
-        mode = ""
+        modes = []
 
         for sector in sectorFrequencies:
-            grid_square.properties[sector] = sectorFrequencies[sector]
+            grid_square.properties["Business count for "+sector] = sectorFrequencies[sector]
             freq = sectorFrequencies[sector]
             if freq == biggest_freq:
-                mode += str(sector) + "; "
+                modes.append(str(sector).strip())
 
-        mode = mode.strip()
-        grid_square.properties["_modal_sector"] = mode
-        grid_square.properties["_freq_of_modal_sector"] = biggest_freq
-        grid_square.properties["businesses_in_this_grid_square_str"] = grid_square.properties["businesses_in_this_grid_square_str"].strip()
-        if hasattr(grid_square.properties, "sectorFrequencies"):
-            delattr(grid_square.properties,"sectorFrequencies")
+        tl_latlong = OSGB36toWGS84(grid_square.properties["Position (TL)"][0], grid_square.properties["Position (TL)"][1])
+        br_latlong = OSGB36toWGS84(grid_square.properties["Position (BR)"][0], grid_square.properties["Position (BR)"][1])
 
-    open("OUTPUT_MODAL_GRID_WITH_INTERVAL_"+str(GRID_INTERVAL_METRES)+".geojson", mode="w", encoding="utf-8").write(geojson.dumps(geojson.FeatureCollection(grid_squares)))
+        if IMPROVED_MODE: # okay, improved mode is now the only mode, because I've basically made peace with the fact that this will only look good/be worth interrogating in a bespoke viewer, which will also take a fraction of the effort to make than trying to bend over backwards to fit this data into a viewer that ISN'T suited to it.
+            efficient_grid_square = geojson.Feature(
+                geometry=grid_square.geometry,
+                properties = {
+                "Sector frequencies":sectorFrequencies,
+                "Freq of modal sector(s)":biggest_freq,
+                "Modal sector(s)":modes,
+                "TL":tl_latlong,
+                "BR":br_latlong,
+                "Businesses":grid_square.properties["Business names"]
+                }
+            );
+            grid_squares[grid_squares.index(grid_square)] = efficient_grid_square
+
+    featureCollection = geojson.FeatureCollection(features=grid_squares, properties={"businesses_all":businesses_all, "sectors_all":sectors_all})
+
+    open("OUTPUT_MODAL_GRID_WITH_INTERVAL_"+str(GRID_INTERVAL_METRES)+".geojson", mode="w", encoding="utf-8").write(geojson.dumps(featureCollection))
 
     print("Processing complete; OUTPUT_MODAL_GRID.geojson should contain the new output.")
 
