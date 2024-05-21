@@ -84,7 +84,8 @@ def process():
         for key in clusters.keys():
             indices = clusters[key]
             polygon = make_convex_hull_around_BNG_points_of_these_rows(indices)
-            features.append(Feature(geometry=polygon, properties={"sector":str(key).replace(str(key).split(": ")[0]+": ",""),
+            features.append(Feature(geometry=polygon, properties={"name":str(key),
+                                                                  "sector":str(key).replace(str(key).split(": ")[0]+": ",""),
                                                                   "names_of_businesses_in_cluster":get_names_for_indices(indices),
                                                                   "total_number_of_businesses_in_cluster":len(indices)}))
     
