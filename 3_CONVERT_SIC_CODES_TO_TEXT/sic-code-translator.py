@@ -129,8 +129,10 @@ def sector_lookup(sector_prefix_string):
         return "Other service activities"
     elif prefixAsFloat <= 98.9999:
         return "Activities of households as employers; undifferentiated goods- and services-producing activities of households for own use"
-    elif prefixAsFloat <= 99.9999:
+    elif prefixAsFloat <= 99.5:
         return "Activities of extraterritorial organisations and bodies"
+    elif prefixAsFloat <= 99.99999999999999:
+        return "Dormant company"
 
 SIC_lookup = {
     "01110":"Growing of cereals (except rice), leguminous crops and oil seeds",
