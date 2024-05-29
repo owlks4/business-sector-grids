@@ -243,6 +243,10 @@ for row in rows:    #for each row in the companies house data
            
     i += 1
     
+    row[postcode_column_index] = row[postcode_column_index].replace(" ","") #remove any spaces anywhere in the postcode
+    row[postcode_column_index] = row[postcode_column_index][:-3] + " " +  row[postcode_column_index][-3:]
+    print("Postcode reprocessed into "+row[postcode_column_index] + " to hopefully make sure the space is in the right place.")
+
     first_letter_of_postcode = row[postcode_column_index].strip().split(" ")[0].upper().strip()[0]
     
     if not first_letter_of_postcode == "B" and not first_letter_of_postcode.isnumeric():
