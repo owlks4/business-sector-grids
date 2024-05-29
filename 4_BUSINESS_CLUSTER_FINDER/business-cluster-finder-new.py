@@ -2,12 +2,18 @@ import time
 import csv
 from scipy.spatial import distance, ConvexHull
 from geojson import Polygon, Feature, FeatureCollection, dumps
-from bng_latlon import WGS84toOSGB36, OSGB36toWGS84
+from bng_latlon import WGS84toOSGB36
 import copy
+from enum import Enum
 
 RADIUS_EASTING_NORTHING_ETC = 150 #METRES??? I GUESS???
 MINIMUM_NUMBER_OF_BUSINESSES_IN_CLUSTER = 20
 MAXIMUM_NUMBER_OF_BUSINESSES_IN_CLUSTER = 120
+
+class DistanceComparisonResult(Enum):
+    FAIL = 0
+    HONOURABLE_MENTION = 1
+    SUCCESS = 2
 
 businesses = []
 name_index = 0
@@ -22,8 +28,7 @@ class Business:
         if row[lat_index] == "" or row[lon_index] == "":
             self.lat = 0
             self.lon = 0
-            self.easting = 0
-            self.northing = 0
+            self.bng = (0,0)
         else:
             self.lat = float(row[lat_index])
             self.lon = float(row[lon_index])
@@ -48,10 +53,14 @@ def process():
         lon_index = headers.index("Longitude")
         sector_index = headers.index("broad_industry")
 
+        print("Setting up...")
+
         for i in range(len(rows)):
             if i == 0:
                 continue
             businesses.append(Business(rows[i]))
+
+        print("Performing preliminary array sort by Latitude (this will make clustering much, much faster)...")
 
         businesses.sort(key = lambda business : business.lat) # sort businesses by latitude
 
@@ -69,6 +78,9 @@ def process():
                     else:
                         businesses_that_have_yet_to_be_processed_for_each_sector[sector] = [business]
 
+        for sector in businesses_that_have_yet_to_be_processed_for_each_sector.keys():
+            businesses_that_have_yet_to_be_processed_for_each_sector[sector].sort(key = lambda business : business.lat)
+
         clusters = {}
 
         current_cluster = []
@@ -80,11 +92,9 @@ def process():
             before = copy.copy(businesses_that_have_yet_to_be_processed_for_each_sector[sector])
             for business in before:
                 if business in businesses_that_have_yet_to_be_processed_for_each_sector[sector]:
-                    businesses_that_have_yet_to_be_processed_for_each_sector[sector].remove(business)
                     if business.lat == 0 or business.lon == 0:
                         continue
-                    bng = business.bng
-                    current_cluster = get_uncompleted_points_of_same_sector_within_radius_of_this_BNG_and_its_neighbours(bng,sector)
+                    current_cluster = get_uncompleted_points_of_same_sector_within_radius_of_this_business_and_its_neighbours(business, sector)
                     if len(current_cluster) >= MINIMUM_NUMBER_OF_BUSINESSES_IN_CLUSTER:
                         cluster_name = "Cluster "+str(len(clusters.keys()))+": "+sector
                         clusters[cluster_name] = current_cluster
@@ -96,7 +106,6 @@ def process():
                         print("ETA in "+str((((1/fraction_complete) * (time_elapsed)) - time_elapsed))[:4] + " seconds")
                     current_cluster = []
 
-        print(clusters)
         print("Coolio. But "+str(len(businesses_that_have_yet_to_be_processed_for_each_sector)) + " businesses could not be clustered. This may be due to lack of proximity to other businesses, or lack of data (do they have a latitude and longitude in the input data?)")
         print("Making convex hulls...")
 
@@ -112,46 +121,69 @@ def process():
         feature_collection = FeatureCollection(features)
         open("output.geojson",mode="w",encoding="utf-8").write(dumps(feature_collection, sort_keys=True))
 
-def get_uncompleted_points_of_same_sector_within_radius_of_this_BNG_and_its_neighbours(src_BNG,sector):
+def get_uncompleted_points_of_same_sector_within_radius_of_this_business_and_its_neighbours(src_business,sector):
     global RADIUS_EASTING_NORTHING_ETC, businesses, businesses_that_have_yet_to_be_processed_for_each_sector
 
-    businesses_to_include = []
-
-    business_BNGs_to_compare_with = [src_BNG]
+    businesses_to_include = [src_business]
 
     yet_to_be_processed_businesses_in_sector = businesses_that_have_yet_to_be_processed_for_each_sector[sector]
 
     keep_going = True
 
+    current_array_dist_away_from_original_position = 0 #immediately becomes 1 when incremented at the start of the first loop, so we never see the 0 value - as intended.
+
+    start_index = yet_to_be_processed_businesses_in_sector.index(src_business)
+
     while keep_going:
         keep_going = False
-    
-        to_be_removed_from_queue_at_end_of_loop = []
 
-        for business in yet_to_be_processed_businesses_in_sector:            
-            if business.lat == 0 or business.lon == 0:
+        current_array_dist_away_from_original_position += 1
+        
+        for i in range(2):
+            match (i):
+                case 0:
+                    current_search_position = start_index + current_array_dist_away_from_original_position
+                case 1:
+                    current_search_position = start_index - current_array_dist_away_from_original_position
+            
+            if current_search_position < 0 or current_search_position >= len(yet_to_be_processed_businesses_in_sector):
                 continue
 
-            if is_within_distance_of_any_of_these_businesses(business.bng, RADIUS_EASTING_NORTHING_ETC, business_BNGs_to_compare_with):
-                keep_going = True
-                to_be_removed_from_queue_at_end_of_loop.append(business)
-                businesses_to_include.append(business)
-                business_BNGs_to_compare_with.append(business.bng)
-                if len(businesses_to_include) >= MAXIMUM_NUMBER_OF_BUSINESSES_IN_CLUSTER: #if we've hit the maximum cluster size
-                    print("Max cluster size reached for this cluster")
-                    keep_going = False
-                    break
-        
-        for business in to_be_removed_from_queue_at_end_of_loop:
-            yet_to_be_processed_businesses_in_sector.remove(business)
+            business = yet_to_be_processed_businesses_in_sector[current_search_position]
+
+            if business in businesses_to_include or business.lat == 0 or business.lon == 0:
+                continue
+            
+            result_of_distance_check = is_within_distance_of_any_of_these_businesses(business, RADIUS_EASTING_NORTHING_ETC, businesses_to_include)
+
+            if not result_of_distance_check == DistanceComparisonResult.FAIL: 
+                keep_going = True #so that we get told to keep going, even if it's an honourable mention (only lat within the specified distance, lon could be anything). This means it evaluates a big vertical zone in the data with an infinite north-south dimension, like the centre gap that forms during the opening of some curtains, and means that rogue businesses with longitudes way out of range won't stop the search dead just because they had latitudes that were closer in the array to the source business than actual valid businesses within the radius that simply have a slightly bigger latitude difference.
+                if result_of_distance_check == DistanceComparisonResult.SUCCESS:
+                    businesses_to_include.append(business)
+                    if len(businesses_to_include) >= MAXIMUM_NUMBER_OF_BUSINESSES_IN_CLUSTER: #if we've hit the maximum cluster size
+                        print("Max cluster size reached for this cluster")
+                        keep_going = False
+                        break
+
+    for business in businesses_to_include:
+        businesses_that_have_yet_to_be_processed_for_each_sector[sector].remove(business)
 
     return businesses_to_include
 
-def is_within_distance_of_any_of_these_businesses(my_BNG, dist, business_BNGs_to_compare_with):
-    for BNG in business_BNGs_to_compare_with:
-        if distance.euclidean(my_BNG, BNG) <= dist:
-            return True
-    return False
+def is_within_distance_of_any_of_these_businesses(my_business, dist, businesses_to_compare_BNGs_with):
+
+    could_be_honourable_mention = False
+
+    for other_business in businesses_to_compare_BNGs_with:
+        if distance.euclidean(my_business.bng, other_business.bng) <= dist:
+            return DistanceComparisonResult.SUCCESS
+        if abs(other_business.bng[1] - my_business.bng[1]) <= dist: #if northing (so latitude) is within range even when easting isn't, give a half-success, otherwise one rogue faraway longitude will stop the search dead, even when there are actual valid longitudes behind it that haven't come up yet due to latitude being the sort key (and no, using two sort keys isn't the solution, I tried that already.)
+            could_be_honourable_mention = True
+    
+    if could_be_honourable_mention:
+        return DistanceComparisonResult.HONOURABLE_MENTION
+    else:
+        return DistanceComparisonResult.FAIL
 
 def get_names_for_businesses(businesses_to_get_names_for):
     global businesses, name_index
@@ -171,17 +203,16 @@ def make_convex_hull_around_BNG_points_of_these_businesses(businesses_to_include
     for business in businesses_to_include_in_hull:
         if business.lat == 0 or business.lon == 0:
             continue
-        p = business.bng
         is_a_dupe_of_an_existing_point = False
         for existing_p in points:
-            if existing_p[0] == p[0] or existing_p[1] == p[1]:
+            if existing_p.bng[0] == business.bng[0] or existing_p.bng[1] == business.bng[1]:
                 is_a_dupe_of_an_existing_point = True
                 break
         if not is_a_dupe_of_an_existing_point:
-            points.append(p)
+            points.append(business)
 
     for i in range(len(points)):
-        points[i] = OSGB36toWGS84(points[i][0],points[i][1])
+        points[i] = (points[i].lat, points[i].lon)
 
     if len(points) >= 3:
         hull = ConvexHull(points)
