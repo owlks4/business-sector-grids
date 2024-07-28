@@ -1,2 +1,3 @@
 files/1_PREPROCESS/Birmingham.osm.geojson
 files/2_COMPARE/ONLY_THE_FEATURES_THAT_HAVE_ADDRESSES.geojson
+__pycache__/
