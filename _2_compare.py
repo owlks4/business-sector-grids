@@ -219,7 +219,7 @@ if not os.path.isfile(OSM_INPUT_PATH):
     print(OSM_INPUT_PATH + " still didn't exist! Aborting step 2.")
     abort = True
 
-if not os.path.isfile(CH_INPUT_PATH):
+if not abort and not os.path.isfile(CH_INPUT_PATH):
     print("Couldn't find "+CH_INPUT_PATH+". You should have obtained this from the companies house downloader.")
     abort = True
 
@@ -236,6 +236,8 @@ if not abort:
     for row in reader:
         rows.append(row)
 
+    company_name_column_index = rows[0].index("company_name")
+    company_number_column_index = rows[0].index("company_number")
     address_column_index = rows[0].index("registered_office_address")
     postcode_column_index = rows[0].index("postcode")
 
@@ -243,27 +245,51 @@ if not abort:
         print ("\nStopped early, because the input file already had the columns we were going to add using this program. If you're sure this is the file you want to be operating on, delete those columns from the csv with an external tool like Excel, then come back.")
         exit()
 
-    output_name = "files/2_COMPARE/output_from_session_beginning_"+str(time.time())+".csv"
-    output = open(output_name, mode="w", encoding="utf-8")
+    output_name = "files/2_COMPARE/output.csv"
+    output = None
 
-    topline = ""
-    for item in rows[0]:
-        topline += "\"" + item + "\","
-    topline += "\"Latitude\",\"Longitude\"\n"
+    start_anew = True
 
-    output.write(topline)
-    output.close()
+    if os.path.isfile(output_name):
+        if input("\nAn output file for step 2 already exists. Would you like to resume where you left off? (Y/N)").strip().lower() == "y":
+            start_anew = False
+            print("\nOk. We will resume using the file that already exists.")
+            existing_output_reader = csv.reader(open(output_name, newline='', encoding="utf-8"), delimiter=',', quotechar='"')
+            existing_output_rows = []
+            print("Looking for resume point...")
+            for row in existing_output_reader:
+                existing_output_rows.append(row)
+            most_recently_processed_existing_row = existing_output_rows[len(existing_output_rows)-1]
+            for row in rows:
+                if row[company_number_column_index].strip() == most_recently_processed_existing_row[company_number_column_index].strip():
+                    STARTING_INDEX_IN_INPUT = rows.index(row) + 1
+                    if STARTING_INDEX_IN_INPUT < 0:
+                        STARTING_INDEX_IN_INPUT = 0
+                    print("Resume point found. We will resume at: "+row[company_name_column_index])
+                    break
+        else:
+            print("Ok. The existing output been deleted.")
+            os.remove(output_name)
 
-    print("* Would you like to use fast mode? *")
-    print("Fast mode is less accurate (the principle is that, when possible, it falls back on postcode centroids instead of nominatim) but will complete faster. If you intend to use this data for low resolution mosaics then it will probably be sufficient.")
+    if start_anew:
+        output = open(output_name, mode="w", encoding="utf-8")
+        topline = ""
+        for item in rows[0]:
+            topline += "\"" + item + "\","
+        topline += "\"Latitude\",\"Longitude\"\n"
+        output.write(topline)
+        output.close()
+
+    print("\n* Would you like to use fast mode? *\n")
+    print("Fast mode is less spatially accurate but will complete faster (the principle is that it tries to use postcode centroids whenever it can, instead of nominatim). If you intend to use this data for low resolution mosaics then it will probably be sufficient.")
     IS_FAST_MODE = True if input("Use fast mode? (Y/N)").strip().lower() == "y" else False
 
     if IS_FAST_MODE:
-        print("Fast mode activated.")
+        print("\nFast mode activated.")
     else:
-        print("Remaining in slow mode.")
+        print("\nRemaining in slow mode.")
 
-    print("Loading addresses from OSM geojson... will take a few minutes...")
+    print("Loading addresses from OSM geojson... will take a few minutes...\n")
     print("Also, just so you know, once the processing starts in full, we will only print messages for:")
     print("* nominatim requests")
     print("* if something goes wrong")
@@ -318,7 +344,7 @@ if not abort:
             #print("Will not process "+row[address_column_index] + "("+str(i)+")")
             continue
             
-        i += 1
+        i += 1 # this is just the generic incrementing of i that happens each loop. The only time we actually use this variable is at the start of the loop anyway, we don't actually use it for indexing after this point. So basically don't worry about the idea of i going out of range; if it ever does, it's probably because there won't BE a next loop anyway.
         
         row[postcode_column_index] = row[postcode_column_index].replace(" ","").upper() #remove any spaces anywhere in the postcode
         row[postcode_column_index] = row[postcode_column_index][:-3] + " " +  row[postcode_column_index][-3:]
@@ -460,14 +486,4 @@ if not abort:
         output.write(s)
         output.close()
 
-            #user_response = ""
-            #already_rejected_features = []
-            #while not user_response.upper() == "Y":
-            #   while not (user_response.upper() == "Y" or user_response.upper() == "N"):
-            #       user_response = input("Respond by pressing 'Y' or 'N'")
-            #   if not user_response.upper() == "Y":
-            #       user_response = ""
-            #       already_rejected_features.append(best_scorer)
-            #       [best_scorer, best_score] = get_closest_feature_match(row, 0.7, already_rejected_features)
-            #       print("How about this one?")
-            #       print_best_match_summary(get_full_address_from_feature(best_scorer), row[address_column_index])       
+    print("Step 2 complete.")

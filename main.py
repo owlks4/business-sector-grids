@@ -2,10 +2,10 @@ import tkinter as tk
 
 print("STARTING")
 
-print("STEP 1")
+print("\nSTEP 1\n")
 import _1_cull_massive_geojson
 
-print("STEP 2")
+print("\nSTEP 2\n")
 import _2_compare
 
 window = tk.Tk()
