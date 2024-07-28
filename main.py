@@ -1,4 +1,5 @@
 import tkinter as tk
+import time
 
 print("STARTING")
 
@@ -7,6 +8,18 @@ import _1_cull_massive_geojson
 
 print("\nSTEP 2\n")
 import _2_compare
+
+print("\nSTEP 3\n")
+import _3_sic_code_translator
+
+print("Sleeping for 7 seconds so that you have time to read any messages from step 3 above ^")
+time.sleep(7)
+
+print("\nSTEP 4\n")
+import _4_business_cluster_finder_new
+
+print("\nSTEP 5\n")
+import _5_create_grid
 
 window = tk.Tk()
 

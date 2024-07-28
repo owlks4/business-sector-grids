@@ -256,7 +256,7 @@ if not abort:
             print("\nOk. We will resume using the file that already exists.")
             existing_output_reader = csv.reader(open(output_name, newline='', encoding="utf-8"), delimiter=',', quotechar='"')
             existing_output_rows = []
-            print("Looking for resume point...")
+            print("Looking for resume point...\n")
             for row in existing_output_reader:
                 existing_output_rows.append(row)
             most_recently_processed_existing_row = existing_output_rows[len(existing_output_rows)-1]
@@ -265,7 +265,7 @@ if not abort:
                     STARTING_INDEX_IN_INPUT = rows.index(row) + 1
                     if STARTING_INDEX_IN_INPUT < 0:
                         STARTING_INDEX_IN_INPUT = 0
-                    print("Resume point found. We will resume at: "+row[company_name_column_index])
+                    print("Resume point found. We will resume after: "+row[company_name_column_index])
                     break
         else:
             print("Ok. The existing output been deleted.")
@@ -297,32 +297,36 @@ if not abort:
 
     file = open(OSM_INPUT_PATH, mode="r", encoding="utf-8")
 
-    g = geojson.load(file)
-    features = g.get("features")
+    if STARTING_INDEX_IN_INPUT < len(rows):
+        g = geojson.load(file)
+        features = g.get("features")
 
-    print("Generating per-postcode prefix dictionary of features (i.e. a list of features for B1, a list of features for B2... and eventually a catch-all list of unpostcoded features too. This greatly reduces the per-feature overhead, because each feature searches a drastically smaller list!")
+        print("Generating per-postcode prefix dictionary of features (i.e. a list of features for B1, a list of features for B2... and eventually a catch-all list of unpostcoded features too. This greatly reduces the per-feature overhead, because each feature searches a drastically smaller list!")
 
-    feature_dict = {}
-
-    for f in features:
-        properties = f.get("properties")
-        if "addr:postcode" in properties:
-            split_postcode = properties["addr:postcode"].strip().split(" ")
-            if not len(split_postcode) == 2:
-                if len(split_postcode[0]) > 4: #if it can't possibly be just the front half (which we allow to stand because we're looking for front halves anyway)
-                    split_postcode[0] = properties["addr:postcode"].strip()[:-3].strip()
-                    print("Replaced an errant spaceless postcode with "+split_postcode[0])
-            postcode_prefix = split_postcode[0].upper()
-            if postcode_prefix in feature_dict:
-                feature_dict[postcode_prefix].append(f)
+        feature_dict = {}
+    
+        for f in features:
+            properties = f.get("properties")
+            if "addr:postcode" in properties:
+                split_postcode = properties["addr:postcode"].strip().split(" ")
+                if not len(split_postcode) == 2:
+                    if len(split_postcode[0]) > 4: #if it can't possibly be just the front half (which we allow to stand because we're looking for front halves anyway)
+                        split_postcode[0] = properties["addr:postcode"].strip()[:-3].strip()
+                        print("Replaced an errant spaceless postcode with "+split_postcode[0])
+                postcode_prefix = split_postcode[0].upper()
+                if postcode_prefix in feature_dict:
+                    feature_dict[postcode_prefix].append(f)
+                else:
+                    feature_dict[postcode_prefix] = [f]
+                    print("Adding new feature dict for postcode prefix: "+postcode_prefix)
             else:
-                feature_dict[postcode_prefix] = [f]
-                print("Adding new feature dict for postcode prefix: "+postcode_prefix)
-        else:
-            if "catchall" in feature_dict:
-                feature_dict["catchall"].append(f)
-            else:
-                feature_dict["catchall"] = [f]
+                if "catchall" in feature_dict:
+                    feature_dict["catchall"].append(f)
+                else:
+                    feature_dict["catchall"] = [f]
+        print("Starting...")
+    else:
+        print("\nIt seems that the resume point is at the end of the data anyway; step 2 should now automatically complete.")
 
     i = 0
     rowslen = str(len(rows) - 1)
@@ -334,7 +338,6 @@ if not abort:
             i += 1
             row.append("Latitude")
             row.append("Longitude")
-            print("Starting...")
             continue
 
         verbose = (i % 1000) == 0

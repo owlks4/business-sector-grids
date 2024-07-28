@@ -39,7 +39,9 @@ class Business:
 def process():
     global businesses, name_index, lat_index, lon_index, sector_index, businesses_that_have_yet_to_be_processed_for_each_sector
 
-    with open('input.csv', newline='', encoding="utf-8") as csvfile:
+    print("Starting step 4.")
+
+    with open('files/2_COMPARE/output.csv', newline='', encoding="utf-8") as csvfile: #yes, we're still operating on the output of step 2, which has also been modified by step 3 in the meantime - this is intentional.
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
 
         rows = []
@@ -119,7 +121,7 @@ def process():
                                                                   "total_number_of_businesses_in_cluster":len(businesses_for_hull)}))
     
         feature_collection = FeatureCollection(features)
-        open("output.geojson",mode="w",encoding="utf-8").write(dumps(feature_collection, sort_keys=True))
+        open("files/4_BUSINESS_CLUSTER_FINDER/business_clusters.geojson",mode="w",encoding="utf-8").write(dumps(feature_collection, sort_keys=True))
 
 def get_uncompleted_points_of_same_sector_within_radius_of_this_business_and_its_neighbours(src_business,sector):
     global RADIUS_EASTING_NORTHING_ETC, businesses, businesses_that_have_yet_to_be_processed_for_each_sector

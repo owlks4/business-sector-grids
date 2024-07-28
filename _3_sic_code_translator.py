@@ -2,7 +2,12 @@ import time
 import csv
 
 def process():
-    with open('input.csv', newline='', encoding="utf-8") as csvfile:
+
+    print("Starting step 3... preparing to amend step 2's output with text-based SIC code labels...\n")
+
+    path = 'files/2_COMPARE/output.csv'
+
+    with open(path, newline='', encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         rows = []
         for row in reader:
@@ -13,7 +18,7 @@ def process():
     sector_prefix_column_index = rows[0].index("sectorCodes")
 
     if "specific_industry" in rows[0] or "broad_industry" in rows[0]:
-        print ("\nStopped early, because the input file already had the columns we were going to add using this program - specific_industry and broad_industry. If you're sure this is the file you want to be operating on, delete those columns from the csv with an external tool like Excel, then come back.")
+        print ("Step 3 will now complete early, because the columns we were going to add using this program - specific_industry and broad_industry - were already there.")
         return;
 
     rows[0].append("specific_industry")
@@ -28,12 +33,12 @@ def process():
             print("WARNING: The company name in this row had a double quotation character in it. If you receive an error immediately after seeing this message, this is probably why - as it runs a high risk of throwing the columns of this csv row out of sync.")
             print("The company name was: "+row[company_name_column_index])
 
-        print("Now processing "+row[company_name_column_index])
+        #print("Now processing "+row[company_name_column_index])
 
         row.append(translate_sic_code(row[sic_code_column_index]))
         row.append(translate_sector_prefixes_of_sic_codes(row[sic_code_column_index])) # I've made this derive the sectors anew from the sic codes, despite there probably being a sector column in the source - this is because I've realised we need an extra digit of the SIC to adequately categorise the retail data - otherwise it generates clusters that are cumbersome in size and too vague to be useful
 
-    with open('input.csv', newline='', encoding="utf-8", mode="w") as csvfile:
+    with open(path, newline='', encoding="utf-8", mode="w") as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
         writer.writerows(rows)
         print ("\nSuccessfully appended the new columns -- 'specific_industry' and 'broad_industry' -- to the input CSV file, which has been modified in-place.")

@@ -1,3 +1,0 @@
-Instead of creating polygon clusters, you might want to portray the data as a colour-coded grid, for uniformity.
-
-We *could* do this with QGIS directly... but QGIS is very trigger-happy about regenerating the entire grid at the slightest change (which takes ages), and we'd have to give it pre-split versions of businesses with multiple sectors, so we might as well do the whole grid process ourselves.
