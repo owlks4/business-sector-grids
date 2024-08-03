@@ -1,4 +1,3 @@
-import tkinter as tk
 import time
 
 print("STARTING")
@@ -20,10 +19,3 @@ import _4_business_cluster_finder_new
 
 print("\nSTEP 5\n")
 import _5_create_grid
-
-window = tk.Tk()
-
-label = tk.Label(text="Test")
-label.pack()
-
-window.mainloop()

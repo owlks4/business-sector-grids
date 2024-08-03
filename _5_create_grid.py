@@ -9,18 +9,33 @@ def makeBoundsIntoGeoJsonFormatPolygon(topLeft,bottomRight):
     bottomLat = bottomRight[0]
     leftLon = topLeft[1]
     rightLon = bottomRight[1]
-
     return [[leftLon,topLat], [rightLon,topLat], [rightLon, bottomLat], [leftLon, bottomLat]] # lat and lon are arranged backwards here, because that's how geojson expects them
 
+
 #TEMPLATE THAT THE REAL ONE MAY DERIVE FROM LATER
-ENTIRE_BHAM_TOPLEFT_EASTING_NORTHING = [378392,316066]
-ENTIRE_BHAM_BOTTOMRIGHT_EASTING_NORTHING = [438836,260377]
+ENTIRE_BHAM_TOPLEFT_EASTING_NORTHING = WGS84toOSGB36(52.625, -2.15)
+ENTIRE_BHAM_BOTTOMRIGHT_EASTING_NORTHING = WGS84toOSGB36(52.3, -1.575)
 
 #TEMPLATE THAT THE REAL ONE MAY DERIVE FROM LATER
 EASTBHAM_TOPLEFT_EASTING_NORTHING = [407884,295228]
 EASTBHAM_BOTTOMRIGHT_EASTING_NORTHING = [419948,276214]
 
-GRID_INTERVAL_METRES = 1000
+interval_response = 0
+print("We're going to make some sector grids; what should be the resolution (metres) of the grid? A good value is 1000, but you might also want to go to 500 or 250.")
+
+while (interval_response == 0):
+    interval_response = input("Input it here: ")
+    if not interval_response.isnumeric():
+        print("\nInput must be a number (no units; they are always metres!)\n")
+        interval_response = 0
+    elif int(interval_response) > 2000:
+        print("\nPlease don't go higher than 2000.\n")
+        interval_response = 0
+    elif int(interval_response) < 250:
+        print("\nPlease don't go lower than 2000.\n")
+        interval_response = 0
+
+GRID_INTERVAL_METRES = int(interval_response)
 
 #THE REAL ONE THAT IS ACTUALLY USED IN THE CALCULATION
 BNG_TOPLEFT_EASTING_NORTHING = ENTIRE_BHAM_TOPLEFT_EASTING_NORTHING
@@ -94,7 +109,7 @@ def process():
         if grid_square == None:
             print("Ignoring a business that didn't fit in any of the grid squares")
             print("It was at: "+latstr + " "+ lonstr)
-            print("But rest assured, we silently processed "+str(num_processed_since_last_skip)+" other businesses in the meantime")
+            print("But rest assured, we silently processed "+str(num_processed_since_last_skip)+" other businesses in the meantime")            
             num_processed_since_last_skip = 0
             print_percentage_complete(i,len(rows))
             continue
@@ -132,6 +147,8 @@ def process():
             else:
                 grid_square.properties.get("sectorFrequencies")[sectorID] = 1
 
+    efficient_grid_squares = []
+
     for grid_square in grid_squares:
         biggest_freq = 0
         sectorFrequencies = grid_square.properties.get("sectorFrequencies")
@@ -141,35 +158,36 @@ def process():
             if freq > biggest_freq:
                 biggest_freq = freq
         
-        modes = []
+        if biggest_freq > 0:
+            modes = []
 
-        for sector in sectorFrequencies:
-            grid_square.properties["Business count for "+str(sector)] = sectorFrequencies[sector]
-            freq = sectorFrequencies[sector]
-            if freq == biggest_freq:
-                modes.append(str(sector).strip())
+            for sector in sectorFrequencies:
+                grid_square.properties["Business count for "+str(sector)] = sectorFrequencies[sector]
+                freq = sectorFrequencies[sector]
+                if freq == biggest_freq:
+                    modes.append(str(sector).strip())
 
-        tl_latlong = OSGB36toWGS84(grid_square.properties["Position (TL)"][0], grid_square.properties["Position (TL)"][1])
-        br_latlong = OSGB36toWGS84(grid_square.properties["Position (BR)"][0], grid_square.properties["Position (BR)"][1])
+            tl_latlong = OSGB36toWGS84(grid_square.properties["Position (TL)"][0], grid_square.properties["Position (TL)"][1])
+            br_latlong = OSGB36toWGS84(grid_square.properties["Position (BR)"][0], grid_square.properties["Position (BR)"][1])
 
-        efficient_grid_square = geojson.Feature(
-            geometry=grid_square.geometry,
-            properties = {
-                "Sector frequencies":sectorFrequencies,
-                "Freq of modal sector(s)":biggest_freq,                
-                "Modal sector(s)":modes,
-                "TL":tl_latlong,
-                "BR":br_latlong,
-                "Businesses":grid_square.properties.get("Business names"),
-                "BusinessesBySector":grid_square.properties.get("BusinessesBySector")
-            }
-        )
-        grid_squares[grid_squares.index(grid_square)] = efficient_grid_square
-
-    print(grid_squares[0].properties.get("Businesses"))
+            efficient_grid_square = geojson.Feature(
+                geometry=grid_square.geometry,
+                properties = {
+                    "Sector frequencies":sectorFrequencies,
+                    "Freq of modal sector(s)":biggest_freq,                
+                    "Modal sector(s)":modes,
+                    "TL":tl_latlong,
+                    "BR":br_latlong,
+                    "Businesses":grid_square.properties.get("Business names"),
+                    "BusinessesBySector":grid_square.properties.get("BusinessesBySector")
+                }
+            )
+            efficient_grid_squares.append(efficient_grid_square)
+        else:
+            pass #(the highest frequency among all sectors in that square was zero, so there cannot be any businesses either and it therefore is not worth storing in the array)
 
     featureCollection = geojson.FeatureCollection(
-        features = grid_squares,
+        features = efficient_grid_squares,
         properties = {
             "timestamp": str(datetime.datetime.now()),
             "businesses_all":businesses_all, #must not sort these, because the indices are important
