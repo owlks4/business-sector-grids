@@ -106,27 +106,26 @@ def construct_and_query_nominatim_url(address):
 def isolate_postcode(address_string):
     address_string = address_string.strip()
     pos = len(address_string) - 1
-    while not address_string[pos] == " ":
+    while not address_string[pos].isnumeric():
         pos -= 1
-    if address_string[pos - 1].isnumeric(): #if the previous char to this one is numeric, it means we're only halfway through the postcode, so keep going back until we hit the next space
+    #at this point, we are at the number at the start of the second half of the postcode.
+    end_of_postcode = pos + 3
+    pos -= 2 #skip back in such a way that we are definitely before the space in the middle of the postcode
+    while not address_string[pos] == " ": #now go back until we encounter the space preceding the entire postcode
         pos -= 1
-        while not address_string[pos] == " ":
-            pos -= 1
     print("Used to be: "+address_string)
-    address_string = address_string[pos:].strip()
+    address_string = address_string[pos:end_of_postcode].strip()
     print("Corrected to: "+address_string)
     return address_string
 
 def isolate_address_beginning_with_house_number(address_string):
     address_string = address_string.strip()
     pos = len(address_string) - 1
-    while not address_string[pos] == " ":
+    while not address_string[pos].isnumeric():
         pos -= 1
-    if address_string[pos - 1].isnumeric(): #if the previous char to this one is numeric, it means we're only halfway through the postcode, so keep going back until we hit the next space
-        pos -= 1
-        while not address_string[pos] == " ":
-            pos -= 1
-    # at this point we are at the beginning of the postcode, so go continue going back until we hit a number, and then until we hit something that isn't a number. At that point we will be at the beginning of the house number, if there is one.
+    #at this point, we are at the number at the start of the second half of the postcode.
+    pos -= 5
+    # at this point we are definitely before the postcode
 
     while not address_string[pos].isnumeric() and pos > 0:
         pos -= 1
@@ -206,7 +205,7 @@ def get_closest_feature_match(row, postcode_leeway, banned_features):
 
 abort = False
 
-CH_INPUT_PATH = "files/2_COMPARE/input.csv"
+CH_INPUT_PATH = "files/2_COMPARE/data_for_step_2.csv"
 OSM_INPUT_PATH = "files/2_COMPARE/ONLY_THE_FEATURES_THAT_HAVE_ADDRESSES.geojson"
 
 if os.path.isfile(OSM_INPUT_PATH+".xz") and not os.path.isfile(OSM_INPUT_PATH):
@@ -342,7 +341,7 @@ if not abort:
 
         verbose = (i % 1000) == 0
 
-        if i < STARTING_INDEX_IN_INPUT:        
+        if i < STARTING_INDEX_IN_INPUT or row[company_name_column_index] == "META_DATE_STRING":        
             i += 1
             #print("Will not process "+row[address_column_index] + "("+str(i)+")")
             continue
