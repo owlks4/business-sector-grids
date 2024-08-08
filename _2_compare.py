@@ -489,7 +489,14 @@ if not abort:
 
         for item in row:
             item_str_without_any_quotes = str(item).replace("\"","").replace(",","")
-            s += "\"" + str(item) + "\","
+            s += "\"" + str(item) + "\""
+            if row.index(item) < len(row) - 1:
+                s += ","
+
+        for i in range(len(row)):
+            row[i] = "\"" + str(row[i]).replace("\"","").replace(",","") + "\""
+
+        s = ",".join(row)
 
         s += "\n"
         output.write(s)
