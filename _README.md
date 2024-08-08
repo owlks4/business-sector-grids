@@ -1,1 +1,1 @@
-The data that you need to put into step 2 as input.csv (as placed in /files/2_COMPARE/) is obtainable with ch-spreadsheet-updater.
+The data that you need to put into step 2 as 'data_for_step_2.csv' (which should be placed in /files/2_COMPARE/) is obtainable with ch-spreadsheet-updater.

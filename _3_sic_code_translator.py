@@ -6,7 +6,7 @@ def process():
     print("Starting step 3... preparing to amend step 2's output with text-based SIC code labels...\n")
 
     path = 'files/2_COMPARE/output.csv'
-
+    
     with open(path, newline='', encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         rows = []
@@ -16,6 +16,17 @@ def process():
     company_name_column_index = rows[0].index("company_name")
     sic_code_column_index = rows[0].index("nature_of_business")
     sector_prefix_column_index = rows[0].index("sectorCodes")
+
+    do_not_preserve_columns_of_this_index_or_greater = 99999999
+
+    for i in range(len(rows[0])):
+        if rows[0][i].strip() == "":
+            if i < do_not_preserve_columns_of_this_index_or_greater:
+                do_not_preserve_columns_of_this_index_or_greater = i
+
+    for row in rows:
+        while len(row) > do_not_preserve_columns_of_this_index_or_greater: #this is here just to kill off any invisible extra columns at the end of the data (that would otherwise potentially desync the new columns we're about to add from their headers)
+            row.pop(-1)
 
     if "specific_industry" in rows[0] or "broad_industry" in rows[0]:
         print ("Step 3 will now complete early, because the columns we were going to add using this program - specific_industry and broad_industry - were already there.")

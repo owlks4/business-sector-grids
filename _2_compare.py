@@ -224,7 +224,7 @@ if not abort and not os.path.isfile(CH_INPUT_PATH):
 
 if not abort:
     print("Loading postcode centroids for step 2...")
-    postcode_centroids = json.loads(open("files/2_COMPARE/postcode_centroids.json").read())
+    postcode_centroids = json.loads(open("files/2_COMPARE/_postcode_centroids.json").read())
     postcode_centroid_keys = sorted(list(postcode_centroids.keys()))
 
     print("Loading the user's CSV data (obtained from companies house)")
@@ -249,6 +249,8 @@ if not abort:
 
     start_anew = True
 
+    ask_if_user_wants_to_use_fast_mode = True
+
     if os.path.isfile(output_name):
         if input("\nAn output file for step 2 already exists. Would you like to resume where you left off? (Y/N)").strip().lower() == "y":
             start_anew = False
@@ -264,7 +266,11 @@ if not abort:
                     STARTING_INDEX_IN_INPUT = rows.index(row) + 1
                     if STARTING_INDEX_IN_INPUT < 0:
                         STARTING_INDEX_IN_INPUT = 0
-                    print("Resume point found. We will resume after: "+row[company_name_column_index])
+                    if STARTING_INDEX_IN_INPUT < len(rows) and rows[STARTING_INDEX_IN_INPUT][company_name_column_index] == "META_DATE_STRING":
+                        STARTING_INDEX_IN_INPUT += 1 # if the next item after the resume point was just the meta date string, increment the starting row because we were finished anyway                        
+                        ask_if_user_wants_to_use_fast_mode = False
+                    else:
+                        print("Resume point found. We will resume after: "+row[company_name_column_index])
                     break
         else:
             print("Ok. The existing output been deleted.")
@@ -279,24 +285,25 @@ if not abort:
         output.write(topline)
         output.close()
 
-    print("\n* Would you like to use fast mode? *\n")
-    print("Fast mode is less spatially accurate but will complete faster (the principle is that it tries to use postcode centroids whenever it can, instead of nominatim). If you intend to use this data for low resolution mosaics then it will probably be sufficient.")
-    IS_FAST_MODE = True if input("Use fast mode? (Y/N)").strip().lower() == "y" else False
+    if ask_if_user_wants_to_use_fast_mode:
+        print("\n* Would you like to use fast mode? *\n")
+        print("Fast mode is less spatially accurate but will complete faster (the principle is that it tries to use postcode centroids whenever it can, instead of nominatim). If you intend to use this data for low resolution mosaics then it will probably be sufficient.")
+        IS_FAST_MODE = True if input("Use fast mode? (Y/N)").strip().lower() == "y" else False
 
-    if IS_FAST_MODE:
-        print("\nFast mode activated.")
-    else:
-        print("\nRemaining in slow mode.")
-
-    print("Loading addresses from OSM geojson... will take a few minutes...\n")
-    print("Also, just so you know, once the processing starts in full, we will only print messages for:")
-    print("* nominatim requests")
-    print("* if something goes wrong")
-    print("* if the index of the current item is a multiple of 1000 (just so that we get the occasional print so that you know it's working!)")
-
-    file = open(OSM_INPUT_PATH, mode="r", encoding="utf-8")
+        if IS_FAST_MODE:
+            print("\nFast mode activated.")
+        else:
+            print("\nRemaining in slow mode.")
 
     if STARTING_INDEX_IN_INPUT < len(rows):
+        print("Loading addresses from OSM geojson... will take a few minutes...\n")
+        print("Also, just so you know, once the processing starts in full, we will only print messages for:")
+        print("* nominatim requests")
+        print("* if something goes wrong")
+        print("* if the index of the current item is a multiple of 1000 (just so that we get the occasional print so that you know it's working!)")
+
+        file = open(OSM_INPUT_PATH, mode="r", encoding="utf-8")
+
         g = geojson.load(file)
         features = g.get("features")
 
@@ -487,5 +494,10 @@ if not abort:
         s += "\n"
         output.write(s)
         output.close()
+
+    if os.path.isfile("files/2_COMPARE/timestamp.txt"):
+        os.remove("files/2_COMPARE/timestamp.txt")
+    timestamp_from_CH_data = " ".join(rows[-1][company_number_column_index].split(" ")[0:4])
+    open("files/2_COMPARE/timestamp.txt", mode="w", encoding="utf-8").write(timestamp_from_CH_data)
 
     print("Step 2 complete.")
