@@ -15,7 +15,7 @@ print("Sleeping for 7 seconds so that you have time to read any messages from st
 time.sleep(7)
 
 print("\nSTEP 4\n")
-import _4_business_cluster_finder_new
+import _4_create_grid
 
 print("\nSTEP 5\n")
-import _5_create_grid
+import _5_business_cluster_finder_new

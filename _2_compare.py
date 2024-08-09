@@ -224,7 +224,7 @@ if not abort and not os.path.isfile(CH_INPUT_PATH):
 
 if not abort:
     print("Loading postcode centroids for step 2...")
-    postcode_centroids = json.loads(open("files/2_COMPARE/_postcode_centroids.json").read())
+    postcode_centroids = json.loads(open("files/2_COMPARE/postcode_centroids.json").read())
     postcode_centroid_keys = sorted(list(postcode_centroids.keys()))
 
     print("Loading the user's CSV data (obtained from companies house)")
@@ -284,6 +284,8 @@ if not abort:
         topline += "\"Latitude\",\"Longitude\"\n"
         output.write(topline)
         output.close()
+
+    IS_FAST_MODE = True #must be initialised here because otherwise it won't exist in the proper scope... found this out the hard way when everything slowed to a crawl lol
 
     if ask_if_user_wants_to_use_fast_mode:
         print("\n* Would you like to use fast mode? *\n")
@@ -485,26 +487,25 @@ if not abort:
             print(str((i-1)/len(rows) * 100) + "% complete overall")
 
         output = open(output_name, mode="a", encoding="utf-8")
-        s = ""
 
-        for item in row:
-            item_str_without_any_quotes = str(item).replace("\"","").replace(",","")
-            s += "\"" + str(item) + "\""
-            if row.index(item) < len(row) - 1:
-                s += ","
+        for row_item_index in range(len(row)):
+            row[row_item_index] = "\"" + str(row[row_item_index]).replace("\"","").replace(",","") + "\""
 
-        for i in range(len(row)):
-            row[i] = "\"" + str(row[i]).replace("\"","").replace(",","") + "\""
+        s = (",".join(row)) + "\n"
 
-        s = ",".join(row)
-
-        s += "\n"
         output.write(s)
         output.close()
 
     if os.path.isfile("files/2_COMPARE/timestamp.txt"):
         os.remove("files/2_COMPARE/timestamp.txt")
-    timestamp_from_CH_data = " ".join(rows[-1][company_number_column_index].split(" ")[0:4])
+
+    timestamp_from_CH_data = "Timestamp did not process correctly"
+
+    for row in rows:
+        if row[company_name_column_index] == "META_DATE_STRING":
+            timestamp_from_CH_data = " ".join(row[company_number_column_index].split(" ")[0:4])
+            break
+
     open("files/2_COMPARE/timestamp.txt", mode="w", encoding="utf-8").write(timestamp_from_CH_data)
 
     print("Step 2 complete.")
