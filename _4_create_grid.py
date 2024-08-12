@@ -128,14 +128,19 @@ def process():
 
         unique_sectors_for_row = []
 
+        indexified_sectors_for_business = ""
+
         for sector in row[broad_industry_column_index].strip().split(";"):
             if not sector == "":
                 sector = sector.strip().upper()         
                 if not sector in sectors_all:
                     sectors_all.append(sector)
                 sectorID = sectors_all.index(sector)
+                indexified_sectors_for_business += str(sectorID) + ";"
                 if not sectorID in unique_sectors_for_row:
                     unique_sectors_for_row.append(sectorID)
+
+        row[broad_industry_column_index] = indexified_sectors_for_business.strip(";")
 
         for j in range(len(unique_sectors_for_row)):
             sectorID = unique_sectors_for_row[j]
@@ -192,7 +197,8 @@ def process():
     featureCollection = geojson.FeatureCollection(
         features = efficient_grid_squares,
         properties = {
-            "timestamp": TIMESTAMP_STRING,
+            "timestamp":TIMESTAMP_STRING,
+            "row_headers":rows[0],
             "businesses_all":businesses_all, #must not sort these, because the indices are important
             "sectors_all":sectors_all  #must not sort these, because the indices are important
             }
