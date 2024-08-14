@@ -5,6 +5,7 @@ from geojson import Polygon, Feature, FeatureCollection, dumps
 from bng_latlon import WGS84toOSGB36
 import copy
 from enum import Enum
+from _util_SIC_lookup import translate_sic_code, translate_sector_prefixes_of_sic_codes, sector_lookup
 
 RADIUS_EASTING_NORTHING_ETC = 150 #METRES??? I GUESS???
 MINIMUM_NUMBER_OF_BUSINESSES_IN_CLUSTER = 20
@@ -53,7 +54,7 @@ def process():
         name_index = headers.index("company_name")
         lat_index = headers.index("Latitude")
         lon_index = headers.index("Longitude")
-        sector_index = headers.index("broad_industry")
+        sector_index = headers.index("sectorCodes")
 
         print("Setting up...")
 
@@ -69,10 +70,12 @@ def process():
         for business in businesses:
             if i == 0:
                 continue
-            sectors = business.sectors.split("; ")
+            sectors = business.sectors.replace("  "," ").split(" ")
             sectors_already_processed_for_this_business = [] #in case a business has lots of duplicate sectors on it
             for sector in sectors:
                 sector = sector.strip().upper()
+                if sector == "":
+                    continue
                 if not sector in sectors_already_processed_for_this_business:
                     sectors_already_processed_for_this_business.append(sector)
                     if sector in businesses_that_have_yet_to_be_processed_for_each_sector:
@@ -116,7 +119,7 @@ def process():
             businesses_for_hull = clusters[key]
             polygon = make_convex_hull_around_BNG_points_of_these_businesses(businesses_for_hull)
             features.append(Feature(geometry=polygon, properties={"name":str(key),
-                                                                  "sector":str(key).replace(str(key).split(": ")[0]+": ",""),
+                                                                  "sector":sector_lookup(str(key).replace(str(key).split(": ")[0]+": ","").strip()),
                                                                   "names_of_businesses_in_cluster":get_names_for_businesses(businesses_for_hull),
                                                                   "total_number_of_businesses_in_cluster":len(businesses_for_hull)}))
     

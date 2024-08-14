@@ -3,6 +3,7 @@ import geojson
 from bng_latlon import WGS84toOSGB36, OSGB36toWGS84
 import datetime
 import os
+from _util_SIC_lookup import translate_sic_code, translate_sector_prefixes_of_sic_codes, sector_lookup
 
 def makeBoundsIntoGeoJsonFormatPolygon(topLeft,bottomRight):
     topLat = topLeft[0]
@@ -48,6 +49,7 @@ e = BNG_TOPLEFT_EASTING_NORTHING[0]
 
 businesses_all = []
 sectors_all = []
+industries_all = []
 grid_squares = []
 
 while e < BNG_BOTTOMRIGHT_EASTING_NORTHING[0]:
@@ -84,8 +86,11 @@ def process():
 
     company_name_column_index = rows[0].index("company_name")
     broad_industry_column_index = rows[0].index("broad_industry")
+    specific_industry_column_index = rows[0].index("specific_industry")
     latitude_column_index = rows[0].index("Latitude")
     longitude_column_index = rows[0].index("Longitude")
+    incorporation_date_column_index = rows[0].index("incorporation_date")
+    dissolution_date_column_index = rows[0].index("dissolution_date")
 
     num_processed_since_last_skip = 0
 
@@ -110,15 +115,16 @@ def process():
         grid_square = get_my_grid_square(WGS84toOSGB36(float(latstr), float(lonstr)))
 
         if grid_square == None:
-            print("Ignoring a business that didn't fit in any of the grid squares")
-            print("It was at: "+latstr + " "+ lonstr)
-            print("But rest assured, we silently processed "+str(num_processed_since_last_skip)+" other businesses in the meantime")            
-            num_processed_since_last_skip = 0
-            print_percentage_complete(i,len(rows))
-            continue
+            if num_processed_since_last_skip > 0:
+                print("Ignoring a business that didn't fit in any of the grid squares") # as seen in the condition above, this section will not print if num_processed_since_last_skip is 0, even though the content of the print statements would still have been true; this is to save on print-incurred processing time if lots of these grid square placement failure scenarios occur consecutively with no successful grid square placements in between
+                print("It was at: "+latstr + " "+ lonstr)
+                print("But rest assured, we silently processed "+str(num_processed_since_last_skip)+" other businesses in the meantime")            
+                num_processed_since_last_skip = 0
+                print_percentage_complete(i,len(rows))
+            continue # so regardless of whether anything was printed, we still skip to the next loop, having failed to find an appropriate grid square for this business
 
         row[company_name_column_index] = row[company_name_column_index].replace("\"","")
-
+        
         businesses_all.append(row)
         businessIndex = len(businesses_all) - 1;
 
@@ -128,19 +134,30 @@ def process():
 
         unique_sectors_for_row = []
 
-        indexified_sectors_for_business = ""
-
         for sector in row[broad_industry_column_index].strip().split(";"):
             if not sector == "":
                 sector = sector.strip().upper()         
                 if not sector in sectors_all:
                     sectors_all.append(sector)
                 sectorID = sectors_all.index(sector)
-                indexified_sectors_for_business += str(sectorID) + ";"
                 if not sectorID in unique_sectors_for_row:
                     unique_sectors_for_row.append(sectorID)
 
-        row[broad_industry_column_index] = indexified_sectors_for_business.strip(";")
+        row[broad_industry_column_index] = ";".join(map(lambda sectorID : str(sectorID), unique_sectors_for_row))
+
+        unique_industries_for_row = []
+
+        for industry in row[specific_industry_column_index].strip().split(";"):
+            if not industry == "":
+                industry = industry.strip()     
+                if not industry in industries_all:
+                    industries_all.append(industry)
+                industryID = industries_all.index(industry)
+                if not industryID in unique_industries_for_row:
+                    unique_industries_for_row.append(industryID)
+
+        row[specific_industry_column_index] = ";".join(map(lambda industryID : str(industryID), unique_industries_for_row))
+
 
         for j in range(len(unique_sectors_for_row)):
             sectorID = unique_sectors_for_row[j]
@@ -200,7 +217,8 @@ def process():
             "timestamp":TIMESTAMP_STRING,
             "row_headers":rows[0],
             "businesses_all":businesses_all, #must not sort these, because the indices are important
-            "sectors_all":sectors_all  #must not sort these, because the indices are important
+            "sectors_all":sectors_all,  #must not sort these, because the indices are important
+            "industries_all":industries_all
             }
         );
 
