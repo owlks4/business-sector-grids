@@ -6,6 +6,7 @@ from bng_latlon import WGS84toOSGB36
 import copy
 from enum import Enum
 from _util_SIC_lookup import translate_sic_code, translate_sector_prefixes_of_sic_codes, sector_lookup
+import os
 
 RADIUS_EASTING_NORTHING_ETC = 150 #METRES??? I GUESS???
 MINIMUM_NUMBER_OF_BUSINESSES_IN_CLUSTER = 20
@@ -22,6 +23,8 @@ lat_index = 0
 lon_index = 0
 sector_index = 0
 businesses_that_have_yet_to_be_processed_for_each_sector = {}
+
+data_path = 'files/2_COMPARE/output.csv'
 
 class Business:
     def __init__(self, row):
@@ -42,7 +45,7 @@ def process():
 
     print("Starting step 5.")
 
-    with open('files/2_COMPARE/output.csv', newline='', encoding="utf-8") as csvfile: #yes, we're still operating on the output of step 2, which has also been modified by step 3 in the meantime - this is intentional.
+    with open(data_path, newline='', encoding="utf-8") as csvfile: #yes, we're still operating on the output of step 2, which has also been modified by step 3 in the meantime - this is intentional.
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
 
         rows = []
@@ -231,4 +234,7 @@ def make_convex_hull_around_BNG_points_of_these_businesses(businesses_to_include
             output.append((point[1],point[0])) # flips it around here because geojson stores latlon coordinates as lonlat
         return Polygon([output])
 
-process()
+if os.path.isfile(data_path):
+    process()
+else:
+    print("Aborting step 5 because the required input from step 2 wasn't there. Did step 2 complete correctly?")

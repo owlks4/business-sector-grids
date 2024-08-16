@@ -12,7 +12,7 @@ def makeBoundsIntoGeoJsonFormatPolygon(topLeft,bottomRight):
     rightLon = bottomRight[1]
     return [[leftLon,topLat], [rightLon,topLat], [rightLon, bottomLat], [leftLon, bottomLat]] # lat and lon are arranged backwards here, because that's how geojson expects them
 
-TIMESTAMP_STRING = open("files/2_COMPARE/timestamp.txt", encoding="utf-8").read()
+TIMESTAMP_STRING = None
 
 #TEMPLATE THAT THE REAL ONE MAY DERIVE FROM LATER
 ENTIRE_BHAM_TOPLEFT_EASTING_NORTHING = WGS84toOSGB36(52.625, -2.15)
@@ -230,4 +230,8 @@ def process():
     open(output_path, mode="w", encoding="utf-8").write(geojson.dumps(featureCollection))
     print("Processing complete; "+output_path+" should contain the new output.")
 
-process()
+if os.path.isfile("files/2_COMPARE/timestamp.txt"):
+    TIMESTAMP_STRING = open("files/2_COMPARE/timestamp.txt", encoding="utf-8").read()
+    process()
+else:
+    print("Step 4 was aborted because a required file from step 2 was not present. Did step 2 complete correctly?")

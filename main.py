@@ -19,3 +19,5 @@ import _4_create_grid
 
 print("\nSTEP 5\n")
 import _5_business_cluster_finder_new
+
+input("Press Enter to close this window.")

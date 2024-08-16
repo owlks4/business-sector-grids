@@ -1,13 +1,18 @@
 import time
 import csv
 from _util_SIC_lookup import translate_sic_code, translate_sector_prefixes_of_sic_codes
+import os
 
 def process():
 
+    path = 'files/2_COMPARE/output.csv'
+
+    if not os.path.isfile(path):
+        print("Will not carry out step 3 because the required file was not there! Did step 2 complete correctly?")
+        return
+
     print("Starting step 3... preparing to amend step 2's output with text-based SIC code labels...\n")
 
-    path = 'files/2_COMPARE/output.csv'
-    
     with open(path, newline='', encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         rows = []

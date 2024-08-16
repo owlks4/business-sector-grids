@@ -219,7 +219,7 @@ if not os.path.isfile(OSM_INPUT_PATH):
     abort = True
 
 if not abort and not os.path.isfile(CH_INPUT_PATH):
-    print("Couldn't find "+CH_INPUT_PATH+". You should have obtained this from the companies house downloader.")
+    print("\nCouldn't find "+CH_INPUT_PATH+". You should have obtained this from the companies house downloader.")
     abort = True
 
 if not abort:
