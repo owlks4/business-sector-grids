@@ -19,7 +19,7 @@ def process():
         for row in reader:
             rows.append(row)
 
-    company_name_column_index = rows[0].index("company_name")
+    company_name_column_index = rows[0].index("CompanyName")
     sic_code_column_index = rows[0].index("nature_of_business")
     sector_prefix_column_index = rows[0].index("sectorCodes")
 

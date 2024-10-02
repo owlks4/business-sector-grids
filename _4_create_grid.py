@@ -84,7 +84,7 @@ def process():
         for row in reader:
             rows.append(row)
 
-    company_name_column_index = rows[0].index("company_name")
+    company_name_column_index = rows[0].index("CompanyName")
     broad_industry_column_index = rows[0].index("broad_industry")
     specific_industry_column_index = rows[0].index("specific_industry")
     latitude_column_index = rows[0].index("Latitude")

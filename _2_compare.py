@@ -20,6 +20,9 @@ postcode_centroid_keys = None
 
 last_nominatim_request_time = 0
 
+def make_address_from_row(row, address_column_indices):
+    return ", ".join(map(lambda x : row[x], address_column_indices)) 
+
 def binarysearch(arr, target):
     lower = 0
     upper = len(arr) - 1
@@ -159,11 +162,11 @@ def get_full_address_from_feature(f):
             num_items_used += 1
     
     if num_items_used >= 2:
-        return output.strip()
+        return output.strip().upper()
     else:
         return None #no way we're matching with a feature that only has one address component
 
-def get_closest_feature_match(row, postcode_leeway, banned_features):
+def get_closest_feature_match(row, postcode_leeway, banned_features, address_we_want_to_find):
     best_scorer = None
     best_score = 0
     
@@ -180,8 +183,6 @@ def get_closest_feature_match(row, postcode_leeway, banned_features):
     
     if list == None:
         list = features # search the long list if we didn't find our postcode in the separate lists
-    
-    address_we_want_to_find = row[address_column_index]
     
     for f in list:      #compare its address to each feature in the massive Birmingham OSM
         feature_postcode = f.get("properties").get("addr:postcode")
@@ -235,10 +236,16 @@ if not abort:
     for row in reader:
         rows.append(row)
 
-    company_name_column_index = rows[0].index("company_name")
-    company_number_column_index = rows[0].index("company_number")
-    address_column_index = rows[0].index("registered_office_address")
-    postcode_column_index = rows[0].index("postcode")
+    company_name_column_index = rows[0].index("CompanyName")
+    company_number_column_index = rows[0].index("CompanyNumber")
+    address_column_indices = [
+        rows[0].index('RegAddress.AddressLine1'),
+        rows[0].index(' RegAddress.AddressLine2'),
+        rows[0].index('RegAddress.PostTown'),
+        rows[0].index('RegAddress.County'),
+        rows[0].index('RegAddress.PostCode')
+    ]
+    postcode_column_index = rows[0].index("RegAddress.PostCode")
 
     if "Latitude" in rows[0] or "Longitude" in rows[0]:
         print ("\nStopped early, because the input file already had the columns we were going to add using this program. If you're sure this is the file you want to be operating on, delete those columns from the csv with an external tool like Excel, then come back.")
@@ -371,26 +378,28 @@ if not abort:
             row.append("")
             row.append("")
             continue
-        
-        if row[address_column_index] in address_cache:
+    
+        full_addr_for_row = make_address_from_row(row, address_column_indices)
+
+        if full_addr_for_row in address_cache:
             if verbose:
                 print("Address was already in the cache! Using cached address for ")
-                print(row[address_column_index])        
-            best_scorer = address_cache[row[address_column_index]]
+                print(full_addr_for_row)        
+            best_scorer = address_cache[full_addr_for_row]
             best_score = 1
             row.append(best_scorer.get("Latitude"))
             row.append(best_scorer.get("Longitude"))
         else:
-            [best_scorer, best_score] = get_closest_feature_match(row, 0, [])
+            [best_scorer, best_score] = get_closest_feature_match(row, 0, [], full_addr_for_row)
 
             if best_scorer == None:
-                [best_scorer, best_score] = get_closest_feature_match(row, 1, [])
+                [best_scorer, best_score] = get_closest_feature_match(row, 1, [], full_addr_for_row)
                 if best_scorer == None:
                     if verbose:
                         print("Couldn't find any matches within the postcode...")
             else:
                 if verbose:
-                    print_best_match_summary(get_full_address_from_feature(best_scorer), row[address_column_index])
+                    print_best_match_summary(get_full_address_from_feature(best_scorer), full_addr_for_row)
 
             if best_score < 0.62:
                 if verbose:
@@ -408,16 +417,16 @@ if not abort:
                 else:
                     if verbose:
                         print("Asking nominatim as a fallback...")
-                    best_scorer = query_nominatim(row[address_column_index])
+                    best_scorer = query_nominatim(full_addr_for_row)
                     if verbose:
-                        print("Here's what we got from nominatim: "+str(latitude) +" "+str(longitude)+" for "+row[address_column_index])
+                        print("Here's what we got from nominatim: "+str(latitude) +" "+str(longitude)+" for "+full_addr_for_row)
                     latitude = best_scorer.get("Latitude")
                     longitude = best_scorer.get("Longitude")
                     if verbose:
                         print(best_scorer)           
                 row.append(latitude)
                 row.append(longitude)
-                address_cache[row[address_column_index]] = {"Latitude":latitude, "Longitude":longitude}
+                address_cache[full_addr_for_row] = {"Latitude":latitude, "Longitude":longitude}
             else:                  # then we got it from the geojson, so process accordingly... we're collapsing building vertices into one pair of coordinates btw
                 if verbose:
                     print("Good string match score! Score was:"+str(best_score))
@@ -480,7 +489,7 @@ if not abort:
                 row.append(latitude)
                 row.append(longitude)
                 
-                address_cache[row[address_column_index]] = {"Latitude":latitude, "Longitude":longitude}
+                address_cache[full_addr_for_row] = {"Latitude":latitude, "Longitude":longitude}
         
         if verbose:
             print("Row "+str(i-1)+" of "+rowslen+" complete")

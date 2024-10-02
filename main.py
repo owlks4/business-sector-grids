@@ -2,6 +2,9 @@ import time
 
 print("STARTING")
 
+print("\nSTEP 0\n")
+import _0_cull_national_CH_csv
+
 print("\nSTEP 1\n")
 import _1_cull_massive_geojson
 

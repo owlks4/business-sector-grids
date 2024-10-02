@@ -54,7 +54,7 @@ def process():
             rows.append(row)
 
         headers = rows[0]
-        name_index = headers.index("company_name")
+        name_index = headers.index("CompanyName")
         lat_index = headers.index("Latitude")
         lon_index = headers.index("Longitude")
         sector_index = headers.index("sectorCodes")
