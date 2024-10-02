@@ -21,7 +21,17 @@ postcode_centroid_keys = None
 last_nominatim_request_time = 0
 
 def make_address_from_row(row, address_column_indices):
-    return ", ".join(map(lambda x : row[x], address_column_indices)) 
+
+    first_part = None
+
+    test_section = row[address_column_indices[1]]
+
+    if len(test_section) == 0 or not test_section[0].isnumeric(): # If the second address component (here called test_section) does not start with a numeric character, we'll need to employ the first address component as well because we're still hoping to lead with a building number
+        first_part = row[address_column_indices[0]] + ", " + row[address_column_indices[1]]
+    else:   #but if the second address component DOES start with a numeriuc character, rejoice! We will ignore the first component and see how we go.
+        first_part = row[address_column_indices[1]]
+
+    return first_part + ", " + (", ".join(map(lambda x : row[x] if address_column_indices.index(x) >= 2 else " ", address_column_indices)).replace(" , "," "))
 
 def binarysearch(arr, target):
     lower = 0
@@ -240,7 +250,7 @@ if not abort:
     company_number_column_index = rows[0].index("CompanyNumber")
     address_column_indices = [
         rows[0].index('RegAddress.AddressLine1'),
-        rows[0].index(' RegAddress.AddressLine2'),
+        rows[0].index('RegAddress.AddressLine2'),
         rows[0].index('RegAddress.PostTown'),
         rows[0].index('RegAddress.County'),
         rows[0].index('RegAddress.PostCode')
@@ -370,14 +380,13 @@ if not abort:
         if verbose:
             print("Postcode reprocessed into "+row[postcode_column_index] + " to hopefully make sure the space is in the right place.")
 
-        first_letter_of_postcode = row[postcode_column_index].strip().split(" ")[0].upper().strip()[0]
-        
-        if (not first_letter_of_postcode == "B" and not first_letter_of_postcode.isnumeric()) or not row[postcode_column_index].strip()[1].isnumeric():
-            if verbose:
-                print(row[postcode_column_index] + " doesn't look like a Birmingham postcode...")
-            row.append("")
-            row.append("")
-            continue
+        #first_letter_of_postcode = row[postcode_column_index].strip().split(" ")[0].upper().strip()[0]        
+        #if (not first_letter_of_postcode == "B" and not first_letter_of_postcode.isnumeric()) or not row[postcode_column_index].strip()[1].isnumeric():
+        #    if verbose:
+        #        print(row[postcode_column_index] + " doesn't look like a Birmingham postcode...")
+        #    row.append("")
+        #    row.append("")
+        #    continue
     
         full_addr_for_row = make_address_from_row(row, address_column_indices)
 
