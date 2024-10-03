@@ -1,6 +1,7 @@
 import os
 import csv
 import time
+from datetime import datetime
 
 path = "files/0_CULL_CH_CSV/input.csv"
 
@@ -50,6 +51,13 @@ if not failed_checks:
             rows_complete = 0
             index_of_postcode_column = -1
             index_of_company_status = -1
+
+            def char_following_prefix_is_numeric_or_a_space(row):
+                c = row[index_of_postcode_column][len(requiredPostcodePrefix)]
+                if c == " " or c.isnumeric():
+                    return True
+                return False
+            
             for row in reader:
                 if is_first_row:
                     for i in range(len(row)):
@@ -63,7 +71,7 @@ if not failed_checks:
                     index_of_company_status = headers.index("CompanyStatus")
                     index_of_company_category = headers.index("CompanyCategory")
                     continue
-                if row[index_of_postcode_column].startswith(requiredPostcodePrefix) and not row[index_of_company_category] == "Overseas Entity" and (not BUSINESSES_MUST_BE_ACTIVE or "Active" in row[index_of_company_status]):
+                if row[index_of_postcode_column].startswith(requiredPostcodePrefix) and char_following_prefix_is_numeric_or_a_space(row) and not row[index_of_company_category] == "Overseas Entity" and (not BUSINESSES_MUST_BE_ACTIVE or "Active" in row[index_of_company_status]):
                     new_row = []
                     for i in range(len(row)):
                         if i in indices_of_columns_to_preserve:
@@ -75,6 +83,14 @@ if not failed_checks:
             with open(output_path, newline='', encoding="utf-8", mode="w") as output:
                 writer = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 writer.writerows(new_rows)
+            if os.path.isfile("files/2_COMPARE/timestamp.txt"):
+                os.remove("files/2_COMPARE/timestamp.txt")
+            timestamp = open("files/2_COMPARE/timestamp.txt", encoding="utf-8", mode="w")
+            date = datetime.now().strftime("%m/%d/%Y")
+            print("\n")
+            print(date)
+            timestamp.write(date)
+            timestamp.close()
     else:
         print("Couldn't find it! Aborting step 0.\n\nYou need to obtain the giant CSV from https://download.companieshouse.gov.uk/en_output.html and place it relative to this script with the following relative filename: "+path)
         print("The other steps will now attempt to take place, but may fail.")

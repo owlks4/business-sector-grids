@@ -514,16 +514,4 @@ if not abort:
         output.write(s)
         output.close()
 
-    if os.path.isfile("files/2_COMPARE/timestamp.txt"):
-        os.remove("files/2_COMPARE/timestamp.txt")
-
-    timestamp_from_CH_data = "Timestamp did not process correctly"
-
-    for row in rows:
-        if row[company_name_column_index] == "META_DATE_STRING":
-            timestamp_from_CH_data = " ".join(row[company_number_column_index].split(" ")[0:4])
-            break
-
-    open("files/2_COMPARE/timestamp.txt", mode="w", encoding="utf-8").write(timestamp_from_CH_data)
-
     print("Step 2 complete.")

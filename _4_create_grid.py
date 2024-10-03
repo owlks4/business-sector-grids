@@ -85,12 +85,12 @@ def process():
             rows.append(row)
 
     company_name_column_index = rows[0].index("CompanyName")
-    broad_industry_column_index = rows[0].index("broad_industry")
-    specific_industry_column_index = rows[0].index("specific_industry")
+    sector_column_index = rows[0].index("sector")
+    industry_column_index = rows[0].index("industry")
     latitude_column_index = rows[0].index("Latitude")
     longitude_column_index = rows[0].index("Longitude")
-    incorporation_date_column_index = rows[0].index("incorporation_date")
-    dissolution_date_column_index = rows[0].index("dissolution_date")
+    incorporation_date_column_index = rows[0].index("IncorporationDate")
+    dissolution_date_column_index = rows[0].index("DissolutionDate")
 
     num_processed_since_last_skip = 0
 
@@ -134,7 +134,7 @@ def process():
 
         unique_sectors_for_row = []
 
-        for sector in row[broad_industry_column_index].strip().split(";"):
+        for sector in row[sector_column_index].strip().split(";"):
             if not sector == "":
                 sector = sector.strip().upper()         
                 if not sector in sectors_all:
@@ -143,11 +143,11 @@ def process():
                 if not sectorID in unique_sectors_for_row:
                     unique_sectors_for_row.append(sectorID)
 
-        row[broad_industry_column_index] = ";".join(map(lambda sectorID : str(sectorID), unique_sectors_for_row))
+        row[sector_column_index] = ";".join(map(lambda sectorID : str(sectorID), unique_sectors_for_row))
 
         unique_industries_for_row = []
 
-        for industry in row[specific_industry_column_index].strip().split(";"):
+        for industry in row[industry_column_index].strip().split(";"):
             if not industry == "":
                 industry = industry.strip()     
                 if not industry in industries_all:
@@ -156,7 +156,7 @@ def process():
                 if not industryID in unique_industries_for_row:
                     unique_industries_for_row.append(industryID)
 
-        row[specific_industry_column_index] = ";".join(map(lambda industryID : str(industryID), unique_industries_for_row))
+        row[industry_column_index] = ";".join(map(lambda industryID : str(industryID), unique_industries_for_row))
 
 
         for j in range(len(unique_sectors_for_row)):
