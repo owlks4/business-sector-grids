@@ -20,8 +20,7 @@ def process():
             rows.append(row)
 
     company_name_column_index = rows[0].index("CompanyName")
-    sic_code_column_index = rows[0].index("nature_of_business")
-    sector_prefix_column_index = rows[0].index("sectorCodes")
+    sic_code_column_indices = [rows[0].index("SICCode.SicText_1"),rows[0].index("SICCode.SicText_2"),rows[0].index("SICCode.SicText_3"),rows[0].index("SICCode.SicText_4")]
 
     do_not_preserve_columns_of_this_index_or_greater = 99999999
 
@@ -34,12 +33,12 @@ def process():
         while len(row) > do_not_preserve_columns_of_this_index_or_greater: #this is here just to kill off any invisible extra columns at the end of the data (that would otherwise potentially desync the new columns we're about to add from their headers)
             row.pop(-1)
 
-    if "specific_industry" in rows[0] or "broad_industry" in rows[0]:
-        print ("Step 3 will now complete early, because the columns we were going to add using this program - specific_industry and broad_industry - were already there.")
+    if "industry" in rows[0] or "sector" in rows[0]:
+        print ("Step 3 will now complete early, because the columns we were going to add using this program - industry and sector - were already there.")
         return;
 
-    rows[0].append("specific_industry")
-    rows[0].append("broad_industry")
+    rows[0].append("sector")
+    rows[0].append("industry")
 
     for i in range(len(rows)):
         if i == 0: #don't process header
@@ -52,12 +51,19 @@ def process():
 
         #print("Now processing "+row[company_name_column_index])
 
-        row.append(translate_sic_code(row[sic_code_column_index]))
-        row.append(translate_sector_prefixes_of_sic_codes(row[sic_code_column_index])) # I've made this derive the sectors anew from the sic codes, despite there probably being a sector column in the source - this is because I've realised we need an extra digit of the SIC to adequately categorise the retail data - otherwise it generates clusters that are cumbersome in size and too vague to be useful
+        industry_codes = map(lambda x : row[x].split(" - ")[0].zfill(5) if len(row[x]) > 0 else None, sic_code_column_indices)
+        industry_codes = list(filter(None, industry_codes))
+        row.append(";".join(industry_codes))
+
+        sector_codes = map(lambda x : row[x].split(" - ")[0].zfill(5)[:2] if len(row[x]) > 0 else None, sic_code_column_indices)
+        sector_codes = list(filter(None, sector_codes))
+        sector_codes = ";".join(sector_codes)
+
+        row.append(sector_codes) # I've made this derive the sectors anew from the sic codes, despite there probably being a sector column in the source - this is because I've realised we need an extra digit of the SIC to adequately categorise the retail data - otherwise it generates clusters that are cumbersome in size and too vague to be useful
 
     with open(path, newline='', encoding="utf-8", mode="w") as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
         writer.writerows(rows)
-        print ("\nSuccessfully appended the new columns -- 'specific_industry' and 'broad_industry' -- to the input CSV file, which has been modified in-place.")
+        print ("\nSuccessfully appended the new columns -- 'industry' and 'sector' -- to the input CSV file, which has been modified in-place.")
 
 process()
