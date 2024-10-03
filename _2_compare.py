@@ -31,7 +31,7 @@ def make_address_from_row(row, address_column_indices):
     else:   #but if the second address component DOES start with a numeriuc character, rejoice! We will ignore the first component and see how we go.
         first_part = row[address_column_indices[1]]
 
-    return first_part + ", " + (", ".join(map(lambda x : row[x] if address_column_indices.index(x) >= 2 else " ", address_column_indices)).replace(" , "," "))
+    return (first_part + ", " + (", ".join(map(lambda x : row[x] if address_column_indices.index(x) >= 2 else " ", address_column_indices)))).replace(" , "," ").replace(" , "," ").replace("  "," ").replace("  "," ")
 
 def binarysearch(arr, target):
     lower = 0

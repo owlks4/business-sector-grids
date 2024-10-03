@@ -35,14 +35,15 @@ def getLeadingLetters(postcode):
 if not failed_checks:
     if os.path.isfile(path):
 
-        print("Because the CSV is a national one, we're going to have to reduce it right down to a particular postcode, e.g. 'B' for Birmingham.")
+        print("Because the CSV is a national one, we're going to have to reduce it right down to a particular postcode, e.g. 'B' for Birmingham. You can also put 'B2' if you only want postcodes such as B25, B26, B27. Reducing the scope like this is extremely useful because it will massively cut down on processing time later on.")
         requiredPostcodePrefix = input("Please specify that letter prefix here and press enter:").upper()
         print("\nGreat, we'll chug away at it. Just remember that this is going to check every business in the country so it might take a little bit, but in my experience this step shouldn't take more than two minutes.")
 
         with open(path, newline='', encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')
             new_headers = ["CompanyName","CompanyNumber","RegAddress.CareOf","RegAddress.POBox","RegAddress.AddressLine1","RegAddress.AddressLine2","RegAddress.PostTown",
-                           "RegAddress.County","RegAddress.Country","RegAddress.PostCode","CompanyCategory","CompanyStatus","DissolutionDate","IncorporationDate"]
+                           "RegAddress.County","RegAddress.Country","RegAddress.PostCode","CompanyCategory","CompanyStatus","DissolutionDate","IncorporationDate",
+                           "SICCode.SicText_1","SICCode.SicText_2","SICCode.SicText_3","SICCode.SicText_4"]
             indices_of_columns_to_preserve = []
             new_rows = []
             is_first_row = True
@@ -62,7 +63,7 @@ if not failed_checks:
                     index_of_company_status = headers.index("CompanyStatus")
                     index_of_company_category = headers.index("CompanyCategory")
                     continue
-                if getLeadingLetters(row[index_of_postcode_column]) == requiredPostcodePrefix and not row[index_of_company_category] == "Overseas Entity" and (not BUSINESSES_MUST_BE_ACTIVE or "Active" in row[index_of_company_status]):
+                if row[index_of_postcode_column].startswith(requiredPostcodePrefix) and not row[index_of_company_category] == "Overseas Entity" and (not BUSINESSES_MUST_BE_ACTIVE or "Active" in row[index_of_company_status]):
                     new_row = []
                     for i in range(len(row)):
                         if i in indices_of_columns_to_preserve:
