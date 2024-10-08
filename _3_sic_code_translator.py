@@ -51,15 +51,13 @@ def process():
 
         #print("Now processing "+row[company_name_column_index])
 
+        sector_codes = map(lambda x : row[x].split(" - ")[0].zfill(5)[:2] if len(row[x]) > 0 else None, sic_code_column_indices)
+        sector_codes = list(filter(None, sector_codes))
+        row.append(";".join(sector_codes))
+
         industry_codes = map(lambda x : row[x].split(" - ")[0].zfill(5) if len(row[x]) > 0 else None, sic_code_column_indices)
         industry_codes = list(filter(None, industry_codes))
         row.append(";".join(industry_codes))
-
-        sector_codes = map(lambda x : row[x].split(" - ")[0].zfill(5)[:2] if len(row[x]) > 0 else None, sic_code_column_indices)
-        sector_codes = list(filter(None, sector_codes))
-        sector_codes = ";".join(sector_codes)
-
-        row.append(sector_codes) # I've made this derive the sectors anew from the sic codes, despite there probably being a sector column in the source - this is because I've realised we need an extra digit of the SIC to adequately categorise the retail data - otherwise it generates clusters that are cumbersome in size and too vague to be useful
 
     with open(path, newline='', encoding="utf-8", mode="w") as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)

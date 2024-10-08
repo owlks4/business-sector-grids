@@ -57,7 +57,7 @@ def process():
         name_index = headers.index("CompanyName")
         lat_index = headers.index("Latitude")
         lon_index = headers.index("Longitude")
-        sector_index = headers.index("sectorCodes")
+        sector_index = headers.index("sector")
 
         print("Setting up...")
 
@@ -73,11 +73,11 @@ def process():
         for business in businesses:
             if i == 0:
                 continue
-            sectors = business.sectors.replace("  "," ").split(" ")
+            sectors = business.sectors.replace("  "," ").split(";")
             sectors_already_processed_for_this_business = [] #in case a business has lots of duplicate sectors on it
             for sector in sectors:
                 sector = sector.strip().upper()
-                if sector == "":
+                if sector == "" or not sector.isnumeric():
                     continue
                 if not sector in sectors_already_processed_for_this_business:
                     sectors_already_processed_for_this_business.append(sector)
