@@ -34,8 +34,9 @@ def translate_sector_prefixes_of_sic_codes(sic_or_sics): #parameter might look w
     return s
 
 def sector_lookup(sector_prefix_string):
-    prefixAsFloat = float(sector_prefix_string.strip()) / 1000.0
-    
+
+    prefixAsFloat = float(sector_prefix_string.strip()) / 10.0
+
     if prefixAsFloat <= 3.3:
         return "Agriculture, Forestry and Fishing"
     elif prefixAsFloat <= 9.9999:

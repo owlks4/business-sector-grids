@@ -20,6 +20,19 @@ postcode_centroid_keys = None
 
 last_nominatim_request_time = 0
 
+def get_index_of_last_number_in_string_but_not_near_the_end(s): # to try and get the index of the beginning of the house number but not erroneously grab the postcode (not that it should be in there anyway)
+    candidate = -1
+    three_quarter_position = int(numpy.round(len(s)*0.8))
+    prev_digit_was_numeric = False
+    for i,c in enumerate(s[:three_quarter_position]):
+        if c.isnumeric():
+            if not prev_digit_was_numeric: #this is here so that we only register a new index at the beginning of a string of numbers, otherwise we'd accidentally cut off numbers like '14' because the function would accidentally narrow the start index to '4'
+                candidate = i
+            prev_digit_was_numeric = True
+        else:
+            prev_digit_was_numeric = False
+    return candidate
+
 def make_address_from_row(row, address_column_indices):
 
     first_part = None
@@ -30,6 +43,13 @@ def make_address_from_row(row, address_column_indices):
         first_part = row[address_column_indices[0]] + ", " + row[address_column_indices[1]]
     else:   #but if the second address component DOES start with a numeriuc character, rejoice! We will ignore the first component and see how we go.
         first_part = row[address_column_indices[1]]
+
+    if not first_part[0].isnumeric():
+        index_of_first_numeric_digit_in_first_half = get_index_of_last_number_in_string_but_not_near_the_end(first_part)
+        if not index_of_first_numeric_digit_in_first_half == -1:
+            #print("Correcting from "+first_part)
+            first_part = first_part[index_of_first_numeric_digit_in_first_half:]
+            #print("to "+first_part)
 
     return (first_part + ", " + (", ".join(map(lambda x : row[x] if address_column_indices.index(x) >= 2 else " ", address_column_indices)))).replace(" , "," ").replace(" , "," ").replace("  "," ").replace("  "," ")
 

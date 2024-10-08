@@ -51,7 +51,7 @@ def process():
 
         #print("Now processing "+row[company_name_column_index])
 
-        sector_codes = map(lambda x : row[x].split(" - ")[0].zfill(5)[:2] if len(row[x]) > 0 else None, sic_code_column_indices)
+        sector_codes = map(lambda x : row[x].split(" - ")[0].zfill(5)[:3] if len(row[x]) > 0 else None, sic_code_column_indices)
         sector_codes = list(filter(None, sector_codes))
         row.append(";".join(sector_codes))
 

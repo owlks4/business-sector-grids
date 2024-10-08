@@ -91,6 +91,7 @@ def process():
     longitude_column_index = rows[0].index("Longitude")
     incorporation_date_column_index = rows[0].index("IncorporationDate")
     dissolution_date_column_index = rows[0].index("DissolutionDate")
+    old_sic_code_column_indices = [rows[0].index("SICCode.SicText_1"),rows[0].index("SICCode.SicText_2"),rows[0].index("SICCode.SicText_3"),rows[0].index("SICCode.SicText_4")]
 
     num_processed_since_last_skip = 0
 
@@ -99,6 +100,9 @@ def process():
             continue
         
         row = rows[i]
+
+        for index in old_sic_code_column_indices: #these are now set to blank because they're no longer needed. We can't remove them during step 3, because if we did it would remove them from the output.csv itself and thus prohibit us from regenerating the recomposed SIC data when we need to.
+            row[index] = ""
 
         if "\"" in row[company_name_column_index]:
             print("WARNING: The company name in this row had a double quotation character in it. If you receive an error immediately after seeing this message, this is probably why - as it runs a high risk of throwing the columns of this csv row out of sync.")
@@ -134,12 +138,14 @@ def process():
 
         unique_sectors_for_row = []
 
-        for sector in row[sector_column_index].strip().split(";"):
-            if not sector == "":
-                sector = sector.strip().upper()         
-                if not sector in sectors_all:
-                    sectors_all.append(sector)
-                sectorID = sectors_all.index(sector)
+        for sector in row[sector_column_index].strip().split(";"):            
+            sector = sector.strip()
+            if not sector == "" and sector.strip().isnumeric():
+                sector_as_text = sector_lookup(sector)
+                sector_as_text = sector_as_text.strip().upper()
+                if not sector_as_text in sectors_all:
+                    sectors_all.append(sector_as_text)
+                sectorID = sectors_all.index(sector_as_text)
                 if not sectorID in unique_sectors_for_row:
                     unique_sectors_for_row.append(sectorID)
 
@@ -148,16 +154,15 @@ def process():
         unique_industries_for_row = []
 
         for industry in row[industry_column_index].strip().split(";"):
-            if not industry == "":
-                industry = industry.strip()     
-                if not industry in industries_all:
-                    industries_all.append(industry)
-                industryID = industries_all.index(industry)
+            if not industry == "" and industry.isnumeric():
+                industry_as_text = translate_sic_code(industry.strip())
+                if not industry_as_text in industries_all:
+                    industries_all.append(industry_as_text)
+                industryID = industries_all.index(industry_as_text)
                 if not industryID in unique_industries_for_row:
                     unique_industries_for_row.append(industryID)
 
         row[industry_column_index] = ";".join(map(lambda industryID : str(industryID), unique_industries_for_row))
-
 
         for j in range(len(unique_sectors_for_row)):
             sectorID = unique_sectors_for_row[j]
