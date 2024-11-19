@@ -1,0 +1,28 @@
+{
+  "name": "business-sector-grids",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "homepage": "https://owlks4.github.io/",
+  "scripts": {
+    "dev": "vite",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "@zip.js/zip.js": "^2.7.32",
+    "colorjs.io": "^0.4.5",
+    "fast-average-color": "^9.4.0",
+    "gh-pages": "^6.1.1",
+    "jszip-utils": "^0.1.0",
+    "leaflet": "^1.9.4",
+    "leaflet-providers": "^2.0.0",
+    "leaflet.markercluster": "^1.5.3",
+    "papaparse": "^5.4.1"
+  }
+}
