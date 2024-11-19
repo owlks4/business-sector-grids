@@ -1,0 +1,32 @@
+# Logs
+javascript-frontend/logs
+javascript-frontend/*.log
+javascript-frontend/npm-debug.log*
+javascript-frontend/yarn-debug.log*
+javascript-frontend/yarn-error.log*
+javascript-frontend/pnpm-debug.log*
+javascript-frontend/lerna-debug.log*
+
+javascript-frontend/node_modules
+javascript-frontend/dist
+javascript-frontend/dist-ssr
+javascript-frontend/*.local
+
+# Editor directories and files
+javascript-frontend/.vscode/*
+!javascript-frontend/.vscode/extensions.json
+javascript-frontend/.idea
+javascript-frontend/.DS_Store
+javascript-frontend/*.suo
+javascript-frontend/*.ntvs*
+javascript-frontend/*.njsproj
+javascript-frontend/*.sln
+javascript-frontend/*.sw?
+
+python-processing/files/0_CULL_CH_CSV/input.csv
+python-processing/files/1_PREPROCESS/Birmingham.osm.geojson
+python-processing/files/2_COMPARE/ONLY_THE_FEATURES_THAT_HAVE_ADDRESSES.geojson
+python-processing/files/2_COMPARE/output_old.csv
+python-processing/__pycache__/
+python-processing/build/
+python-processing/dist/

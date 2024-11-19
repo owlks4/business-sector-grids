@@ -227,7 +227,7 @@ def process():
             }
         );
 
-    output_path = "files/4_CREATE_GRID_SHOWING_BUSINESS_SECTOR_FREQUENCIES/output_grid_with_interval_"+str(GRID_INTERVAL_METRES)+".geojson"
+    output_path = "files/4_CREATE_GRID/output_grid_with_interval_"+str(GRID_INTERVAL_METRES)+".geojson"
 
     if os.path.isfile(output_path):
         os.remove(output_path)
