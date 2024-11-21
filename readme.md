@@ -1,6 +1,6 @@
 # Companies house businesses as sector grids
 
-This is a processor and viewer for companies house data, allowing you to view the distribution of businesses in an area according to sector. The processor produces a 'mosaic' at a user-specified resolution in geojson format - which can be duly placed in the frontend files for an updated view.
+This is a processor and viewer for companies house data, allowing you to view the distribution of businesses in an area according to sector. The processor produces a 'mosaic' at a user-specified resolution in geojson format - which can be duly placed in the frontend files for an updated view. It also generates polygons for clusters, though the distance metric and number of businesses required for a 'cluster' to form is arbitary and subject to the user's choice, so it may be better to just judge from the mosaic whether a group of businesses is a 'cluster' for your purposes or not.
 
 E.g. you would be able to use this program to find a seeming hub of Manufacturing businesses in a city.
 
