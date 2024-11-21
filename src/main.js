@@ -6,17 +6,16 @@ import Color from "colorjs.io/dist/color.js";
 import grid_250 from "./BusinessSectorGrids/output_grid_with_interval_250.geojson?url"
 import grid_500 from "./BusinessSectorGrids/output_grid_with_interval_500.geojson?url"
 import grid_1000 from "./BusinessSectorGrids/output_grid_with_interval_1000.geojson?url"
-//import grid_scratchpad from "./BusinessSectorGrids/olivers_scratchpad.geojson?url"
+//import grid_scratchpad from "./BusinessSectorGrids/scratchpad.geojson?url"
+import { map, fractionalYearToYearAndMonth, setChangeSelectedSectorTo,
+        sectorSelector, sectors_all, set_sectors_all} from "./global.js";
+import { updateTimeFromTimestamp, currentViewingYear, timeRange, DEFAULT_YEAR } from "./timeRange.js";
 
-var map = L.map('map').setView([52.4625,-1.6], 11);
 let currentBasemapTileLayer = null;
 
+setChangeSelectedSectorTo(changeSelectedSectorTo);
+
 let cached = {};
-
-let PRESENT_DATE = null;
-let DEFAULT_YEAR = null;
-
-let currentViewingYear = DEFAULT_YEAR;
 
 //document.getElementById("basemap-selector").onchange = (e) => {switchToBasemap(e.target.value)};
 
@@ -35,73 +34,7 @@ function getColumnValueForBusiness(business, columnName){
     return business[business_info_row_headers.indexOf(columnName)];
 }
 
-function findChildElementWithIdRecursive(node, idToFind){
-    if (node.id == idToFind){
-        return node;
-    }
-    for (let i = 0; i < node.children.length; i++){
-        let result = findChildElementWithIdRecursive(node.children[i], idToFind)
-        if (result != null){
-            return result;
-        }
-    }
-    return null;
-}
-
-let MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-
-function fractionalYearToYearAndMonth(fractionalYear){
-    let year = Math.floor(fractionalYear);
-    let fractionalMonth = fractionalYear - year;
-    return MONTHS[Math.floor(fractionalMonth * 12)] + " " + year;
-}
-
-let TimeRange = L.Control.extend({ 
-    _container: null,
-    options: {position: 'bottomleft', },
-
-    onAdd: function (map) {
-        var div = L.DomUtil.create('div');
-        this._div = div;
-        div.appendChild(document.getElementById("time-range-template").content.cloneNode(true))
-        this.currentTimeLabel = findChildElementWithIdRecursive(div,"time-range-current-label");
-        this.range = findChildElementWithIdRecursive(div,"time-range-slider")
-        this.desc = findChildElementWithIdRecursive(div,"time-range-description")
-        this.range.oninput = (e) => {
-            currentViewingYear = e.target.value;
-            this.currentTimeLabel.innerText = fractionalYearToYearAndMonth(currentViewingYear);
-            changeSelectedSectorTo(sectorSelector.value);
-        };
-        L.DomEvent.disableClickPropagation(this._div);
-        L.DomEvent.disableScrollPropagation(this._div);
-        return this._div;
-    },
-
-    updateMaxYear: function (newMaxYear){
-        if (this._div == null){
-            return;
-        }
-        this.range.setAttribute("max",newMaxYear);
-        this.range.value = currentViewingYear;
-        findChildElementWithIdRecursive(this._div,"time-range-start-label").innerText = "Min: "+fractionalYearToYearAndMonth(this.range.min);
-        this.currentTimeLabel.innerText = fractionalYearToYearAndMonth(this.range.value);
-        findChildElementWithIdRecursive(this._div,"time-range-end-label").innerText = "Max: "+fractionalYearToYearAndMonth(this.range.max);
-        changeSelectedSectorTo(sectorSelector.value);
-    },
-
-    updateDesc: function (){
-        if (this._div == null){
-            return;
-        }
-        this.desc.innerHTML = "Showing "+sectors_all[sectorSelector.value]+" businesses<br>that were active at timeslice:";
-    }
-  });
-
-let timeRange = new TimeRange();
-//timeRange.addTo(map);
-
 let gridSelector = document.getElementById("grid-selector");
-let sectorSelector = document.getElementById("sector-selector");
 
 document.getElementById("grid-from-file-button").onclick = () => {
     let upload = document.createElement("input");
@@ -252,7 +185,6 @@ let hasCompletedFirstTimeSetup = false;
 let selectedSquare = null;
 
 let businesses_all = null;
-let sectors_all = null;
 let industries_all = null;
 
 let business_info_row_headers = ["CompanyName", "CompanyNumber", "RegAddress.CareOf", "RegAddress.POBox", "RegAddress.AddressLine1", "RegAddress.AddressLine2", "RegAddress.PostTown", "RegAddress.County", "RegAddress.Country", "RegAddress.PostCode", "CompanyCategory", "CompanyStatus", "DissolutionDate", "IncorporationDate", "SICCode.SicText_1", "SICCode.SicText_2", "SICCode.SicText_3", "SICCode.SicText_4", "Latitude", "Longitude", "sector", "industry"];
@@ -362,13 +294,6 @@ function makeClickableListOfBusinessesInThisSquare(gridSquareFeature, requiredSe
     return div;
 }
 
-function updateTimeFromTimestamp(timestamp){
-    PRESENT_DATE = new Date(Date.parse(timestamp))
-    DEFAULT_YEAR = PRESENT_DATE.getFullYear() + ((PRESENT_DATE.getMonth() + 1) / 12);
-    currentViewingYear = DEFAULT_YEAR;    
-    timeRange.updateMaxYear(DEFAULT_YEAR);
-}
-
 async function swapOutCurrentGeojson(value){
     let geojson = await loadJson(value);
 
@@ -379,7 +304,7 @@ async function swapOutCurrentGeojson(value){
     sectorSelector.innerHTML = "";
 
     businesses_all = geojson.properties.businesses_all;
-    sectors_all = geojson.properties.sectors_all;
+    set_sectors_all(geojson.properties.sectors_all);
     industries_all = geojson.properties.industries_all;
 
     document.getElementById("retrieval-timestamp").innerText = geojson.properties.timestamp;
