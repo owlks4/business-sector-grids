@@ -235,8 +235,8 @@ function getRangePolygonFromBounds(){
 }
 let rangeBounds = [new L.LatLng(52.448583332530795, -1.8199856452665157), new L.LatLng(52.46712385493207, -1.860969796670761)];
 let rangePolygon = getRangePolygonFromBounds().addTo(map);
-let rangeTLCorner = makeRangeCornerMarkerAt(rangeBounds[0], 0)
-let rangeBRCorner = makeRangeCornerMarkerAt(rangeBounds[1], 1)
+makeRangeCornerMarkerAt(rangeBounds[0], 0)
+makeRangeCornerMarkerAt(rangeBounds[1], 1)
 
 function getColourSteppedBetweenValues(val, lowest, highest, low_colour, high_colour){
     let step = (val - lowest) / (highest - lowest);
@@ -428,6 +428,19 @@ async function changeSelectedSectorTo(sector){
             layer.setStyle({opacity:'0', fillOpacity:'0', interactive:false});
             layer.off('click'); //zero out the onclick function for layers that aren't included in the current view
             return;
+        } else if (layer.excluded) {
+            layer.off('click'); //zero out the onclick function for layers that are excluded
+            layer.on('click', () => {
+                L.popup()
+                    .setLatLng(layer.getBounds().getCenter())
+                    .setContent("You disabled this grid square. Right click it to toggle its exclusion.")
+                    .openOn(map);
+                            });
+            layer.setStyle({          
+                color: "rgb(200,0,0)",
+                fillColor: "rgb(200,0,0)",
+               });
+            return;
         } else {
             layersToInclude.push(layer);
             layer.setStyle({opacity:'1', fillOpacity:'0.8', interactive:true}); 
@@ -502,6 +515,11 @@ async function changeSelectedSectorTo(sector){
             }
             currentPin = L.marker(layer.getBounds().getCenter(), {}).addTo(map);
             showInformationAboutGridSquare(layer.feature, sector)
+        });
+
+        layer.on('contextmenu',function(e){
+            layer.excluded = !layer.excluded;
+            changeSelectedSectorTo(sectorSelector.value);
         });
 
         if (selectedSquare != null){

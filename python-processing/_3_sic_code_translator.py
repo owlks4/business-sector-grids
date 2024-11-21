@@ -1,4 +1,3 @@
-import time
 import csv
 from _util_SIC_lookup import translate_sic_code, translate_sector_prefixes_of_sic_codes
 import os

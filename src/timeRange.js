@@ -4,7 +4,7 @@ import { map, findChildElementWithIdRecursive, fractionalYearToYearAndMonth,
 let PRESENT_DATE = null;
 let DEFAULT_YEAR = null;
 
-const USE_TIME_RANGE = false;
+const USE_TIME_RANGE = true;
 
 let currentViewingYear = DEFAULT_YEAR;
 

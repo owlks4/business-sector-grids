@@ -1,7 +1,6 @@
 import csv
 import geojson
 from bng_latlon import WGS84toOSGB36, OSGB36toWGS84
-import datetime
 import os
 from _util_SIC_lookup import translate_sic_code, translate_sector_prefixes_of_sic_codes, sector_lookup
 
