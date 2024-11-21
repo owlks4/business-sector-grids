@@ -435,8 +435,11 @@ async function changeSelectedSectorTo(sector){
                     .setLatLng(layer.getBounds().getCenter())
                     .setContent("You disabled this grid square. Right click it to toggle its exclusion.")
                     .openOn(map);
-                            });
-            layer.setStyle({          
+            });
+            layer.setStyle({
+                opacity:'1',
+                fillOpacity:'0.8',
+                interactive:true,
                 color: "rgb(200,0,0)",
                 fillColor: "rgb(200,0,0)",
                });
