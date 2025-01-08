@@ -34,6 +34,17 @@ postcode_centroid_keys = None
 
 last_nominatim_request_time = 0
 
+def make_strs_in_object_into_floats(o):
+    for key in o.keys():
+        try:
+            o[key] = float(o[key])
+        except ValueError:
+            pass
+    return o
+
+def process_latlong_for_storage(lat,long): 
+    return {"Latitude":str(lat)[:10], "Longitude":str(long)[:10]}  #we store the floats as strings to make the filesize smaller in this text-based json output. Otherwise you get loads of floats storing with '0.000000000001' tacked on the end. (I decided to go with JSON over BSON or a database.)
+
 def get_index_of_last_number_in_string_but_not_near_the_end(s): # to try and get the index of the beginning of the house number but not erroneously grab the postcode (not that it should be in there anyway)
     candidate = -1
     three_quarter_position = int(numpy.round(len(s)*0.8))
@@ -132,8 +143,8 @@ def query_nominatim(address):
             postcode_centroid_list_entry = try_for_a_postcode_centroid_match(isolated_postcode)
 
             if not postcode_centroid_list_entry == None:
-                return {"Latitude": postcode_centroid_list_entry[1], "Longitude": postcode_centroid_list_entry[0]}
-            
+                return {"Latitude": postcode_centroid_list_entry[1], "Longitude": postcode_centroid_list_entry[0]}                    
+
             #and if that failed, via nominatim
             time.sleep(1)
             json = construct_and_query_nominatim_url(isolated_postcode)
@@ -267,6 +278,7 @@ abort = False
 
 CH_INPUT_PATH = "files/2_COMPARE/data_for_step_2.csv"
 OSM_INPUT_PATH = "files/2_COMPARE/ONLY_THE_FEATURES_THAT_HAVE_ADDRESSES.geojson"
+CACHE_PATH = "files/2_COMPARE/persistent_cache.json"
 
 if os.path.isfile(OSM_INPUT_PATH+".xz") and not os.path.isfile(OSM_INPUT_PATH):
     print("Couldn't find "+OSM_INPUT_PATH+", but we did find its compressed XZ version. Decompressing...")
@@ -407,6 +419,9 @@ if not abort:
 
     address_cache = {}
 
+    if os.path.isfile(CACHE_PATH):
+        address_cache = json.loads(open(CACHE_PATH).read())
+
     for row in rows:    #for each row in the companies house data
         if i == 0:
             i += 1
@@ -414,7 +429,7 @@ if not abort:
             row.append("Longitude")
             continue
 
-        verbose = (i % 1000) == 0
+        verbose = (i % 1000) == 0 #verbose also controls whether we save to the cache file this time - the cache is important, so 
 
         if i < STARTING_INDEX_IN_INPUT or row[company_name_column_index] == "META_DATE_STRING":        
             i += 1
@@ -443,7 +458,7 @@ if not abort:
             if verbose:
                 print("Address was already in the cache! Using cached address for ")
                 print(full_addr_for_row)        
-            best_scorer = address_cache[full_addr_for_row]
+            best_scorer = make_strs_in_object_into_floats(address_cache[full_addr_for_row])
             best_score = 1
             row.append(best_scorer.get("Latitude"))
             row.append(best_scorer.get("Longitude"))
@@ -484,7 +499,7 @@ if not abort:
                         print(best_scorer)           
                 row.append(latitude)
                 row.append(longitude)
-                address_cache[full_addr_for_row] = {"Latitude":latitude, "Longitude":longitude}
+                address_cache[full_addr_for_row] = process_latlong_for_storage(latitude,longitude)
             else:                  # then we got it from the geojson, so process accordingly... we're collapsing building vertices into one pair of coordinates btw
                 if verbose:
                     print("Good string match score! Score was:"+str(best_score))
@@ -547,11 +562,14 @@ if not abort:
                 row.append(latitude)
                 row.append(longitude)
                 
-                address_cache[full_addr_for_row] = {"Latitude":latitude, "Longitude":longitude}
+                address_cache[full_addr_for_row] = process_latlong_for_storage(latitude,longitude)
         
         if verbose:
             print("Row "+str(i-1)+" of "+rowslen+" complete")
             print(str((i-1)/len(rows) * 100) + "% complete overall")
+            if os.path.isfile(CACHE_PATH):
+                os.remove(CACHE_PATH)
+            open(CACHE_PATH, mode="w").write(json.dumps(address_cache))
 
         output = open(output_name, mode="a", encoding="utf-8")
 
@@ -562,5 +580,9 @@ if not abort:
 
         output.write(s)
         output.close()
+
+    if os.path.isfile(CACHE_PATH): #update cache one final time now that we've completed
+        os.remove(CACHE_PATH)
+        open(CACHE_PATH, mode="w").write(json.dumps(address_cache))
 
     print("Step 2 complete.")
