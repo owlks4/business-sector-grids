@@ -45,7 +45,7 @@ let TimeRange = L.Control.extend({
         if (this._div == null){
             return;
         }
-        this.desc.innerHTML = "Showing "+sectors_all[sectorSelector.value]+" businesses that are currently active (and that were<br>also active, in the same location, at timeslice):";
+        this.desc.innerHTML = "Showing "+sectors_all[sectorSelector.value]+" businesses that are currently active  (and that were also active at the given timeslice, though not necessarily in the same location):";
     }
   });
 

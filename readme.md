@@ -4,7 +4,7 @@ This is a processor and viewer for companies house data, allowing you to view th
 
 E.g. you would be able to use this program to find a seeming hub of Manufacturing businesses in a city.
 
-You can also adjust the time slider to a past data, to ensure that the businesses revealed to you were also active in the same location at the selected time. Remember, though, that this doesn't constitute a complete picture of the businesses in the area at the selected time - because it's only ones that are still in the same place today. So it could be thought of as showing stalwart/mainstay businesses that have been in the area since at least 2010.
+You can also adjust the time slider to a past date, which reveals which businesses in the present day timeslice were also active at that time in the past. However, this should only be thought of as showing stalwart/mainstay businesses that have existed since at least 2010 - it doesn't necessarily mean that they existed *in that place* at that time (they may have, but it isn't guaranteed).
 
 
 ## Caveats to be aware of
@@ -18,11 +18,9 @@ To combat this, consider right-clicking any offending squares to exclude them fr
 
 The python scripts in the /python-processing/ folder can be used to regenerate the geojson grids that are fed into the map. You should run them by running the master script, and hopefully the scripts themselves provide adequate advice/error catching for you to be able to run them or at least find out where errors have occurred. This program was designed for Birmingham, UK, and as such uses a pared down version of Birmingham.osm, but OSM files for other locations are easily found on the internet.
 
-One unfortunate fact is that the processing is very slow, so you'll have to leave it to run while you do something else. For Birmingham it takes around 6 hours - and that's in 'fast mode'. The reason for this is the fact that this program, while using the local OSM resource as often as it can, uses Nominatim's API as a fallback with a time delay so that it does not encumber it. If you want to use this for another purpose I strongly suggest setting up a local nominatim instance, which I have not done here because its installation process is a bit more complicated and creates a barrier to entry for any novice who might want to run this (having to build a wheel etc).
+One unfortunate fact is that the processing is very slow, so you'll have to leave it to run while you do something else. For Birmingham it takes around 6 hours - and that's in 'fast mode'. The reason for this is the fact that this program, while using the local OSM resource as often as it can, uses Nominatim's API as a fallback with a time delay so that it does not encumber it. If you want to use this for another purpose I strongly suggest setting up a local nominatim instance, although this requires the user to get a bit more technical. I found I had to run the project on linux to get the required dependencies to work, rather than Windows. If you do want to do this, check the Linux section below.
 
-Another good way to reduce the time taken is by limiting your postcode requirements when _0_cull_national_CH_csv.py runs.
-
-If you do want to incorporate an alternative fallback geolocation process for your own purposes, the relevant function is query_nominatim(), in /python-processing/_2_compare.py
+One way to reduce the time taken is by limiting your postcode requirements when _0_cull_national_CH_csv.py runs. For example, asking only for B2 postcode prefixes, rather than B postcode prefixes, will massively reduce the processing time, by only retrieving B20, B21, B22, etc.
 
 
 ## How to run the frontend
@@ -34,3 +32,31 @@ You can install it by running the command 'npm install' in the root folder and c
 To webpack it for deployment elsewhere, run 'npm build'.
 
 To deploy it straight to github pages, run 2_DEPLOY.bat, but remember to change the relevant URLs in vite.config.js and package.json first.
+
+
+## Running on linux for local nominatim geocoding
+
+In practice, I didn't find that using a local nominatim instance particularly sped things up, because it seems to be less capable at geocoding than the nominatim web API, even when provided with the exact same address query. All the 'easy' address matches were hoovered up by the regular string similarity metric comparison, leaving any remaining ones too obscure for the local nominatim library to identify - they were all forced to use the web API fallback, defeating the point.
+
+But if you want to try using this feature anyway for some reason, I used the following steps:
+
+1. Make sure you have the modules nominatim-db and nominatim-api installed in your pip venv. The code specifically checks that nominatim-api is installed before it even attempts to use a local nominatim database. Make sure you have also followed the instructions on this page https://nominatim.org/release-docs/latest/admin/Installation/#installing-the-latest-release to make sure you have the prequisites installed.)
+
+2. You may have to create sql database users if it's your first time running. For example, in bash:
+> sudo -u postgres createuser -s nominatim
+
+3. Use nominatim to import your OSM file into the database - for example:
+> nominatim import --osm-file Birmingham.osm
+
+Obviously please try not to use anything too large - stay away from Planet.osm! - the smaller it is, the faster it will be.
+This step will take a few minutes, but you will only have to perform it once to create the database.
+
+If it stops early, or you later have reason to believe that the import was incomplete, consider using the following command:
+> nominatim import --continue indexing
+
+4. Go into the database and make sure the postgis extension is enabled (and don't forget the semicolon to make sure the command actually runs!):
+> psql nominatim
+> CREATE EXTENSION postgis;
+> \q
+
+At this point, you should be able to run main.py with the venv's python3. However, as stated above, I didn't find it significantly faster. If you do want to incorporate an alternative fallback geolocation process for your own purposes, the relevant function is query_nominatim(), in /python-processing/_2_compare.py

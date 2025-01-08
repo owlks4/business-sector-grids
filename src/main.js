@@ -291,6 +291,34 @@ function makeClickableListOfBusinessesInThisSquare(gridSquareFeature, requiredSe
 
     div.appendChild(ul);
 
+    if (gridSquareFeature.properties.Businesses != null){
+        let percentageBreakdown = document.createElement("div");
+        percentageBreakdown.innerHTML = "<br><strong>Percentage breakdown of top 10 sectors in the square:</div>";
+        
+        let sectorFreqs = gridSquareFeature.properties["Sector frequencies"];
+        let keysForPercentageBreakdown = Object.keys(sectorFreqs);
+        keysForPercentageBreakdown.sort((a,b)=>{return sectorFreqs[a] == sectorFreqs[b] ? 0 : (sectorFreqs[a] > sectorFreqs[b] ? -1 : 1)})
+        let numBusinessesInGridSquare = gridSquareFeature.properties["Businesses"].length;
+        let table = document.createElement("table");
+        let tbody = document.createElement("tbody");
+        table.appendChild(tbody);
+
+        for (let i = 0; i < (numBusinessesInGridSquare > 10 ? 10 : numBusinessesInGridSquare); i++){
+            let tr = document.createElement("tr");            
+            let freq = sectorFreqs[keysForPercentageBreakdown[i]];
+            let td0 = document.createElement("td");
+            let td1 = document.createElement("td");
+            td0.innerHTML = roundToDP((freq / numBusinessesInGridSquare * 100),1) + "%";
+            td1.innerHTML = sectors_all[keysForPercentageBreakdown[i]];
+            tr.appendChild(td0);
+            tr.appendChild(td1);
+            tbody.appendChild(tr);
+        }
+
+        percentageBreakdown.appendChild(table);
+        div.appendChild(percentageBreakdown);
+    }
+    
     return div;
 }
 
@@ -459,8 +487,8 @@ async function changeSelectedSectorTo(sector){
             if (isBusinessActiveAtTimeAndOfSector(business, curRangeTime, sector)){
                 layerFreq++;
             }
-        })
-        
+        });
+
         mean += layerFreq;
         count_for_mean++;
 

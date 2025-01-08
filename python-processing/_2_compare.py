@@ -10,10 +10,24 @@ import numpy
 import lzma
 import json
 
+LOCAL_NOMINATIM_EXISTS = True
+
+config_params = {
+    'NOMINATIM_DATABASE_DSN': 'pgsql:dbname=nominatim'
+}
+
+try:
+    import nominatim_api as napi
+    print("LOCAL NOMINATIM MODULE LOADING SUCCESSFUL.\n")
+except ImportError:
+    LOCAL_NOMINATIM_EXISTS = False
+
 headers={"User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
 
 NOMINATIM_COOLDOWN_TIME = 7
 STARTING_INDEX_IN_INPUT = 0
+
+TRY_TO_CUT_DOWN_START_OF_STRING = False # turning this on actually reduces the match rate, so I don't recommend it.
 
 postcode_centroids = None
 postcode_centroid_keys = None
@@ -39,12 +53,12 @@ def make_address_from_row(row, address_column_indices):
 
     test_section = row[address_column_indices[1]]
 
-    if len(test_section) == 0 or not test_section[0].isnumeric(): # If the second address component (here called test_section) does not start with a numeric character, we'll need to employ the first address component as well because we're still hoping to lead with a building number
+    if not TRY_TO_CUT_DOWN_START_OF_STRING or (len(test_section) == 0 or not test_section[0].isnumeric()): # If the second address component (here called test_section) does not start with a numeric character, we'll need to employ the first address component as well because we're still hoping to lead with a building number
         first_part = row[address_column_indices[0]] + ", " + row[address_column_indices[1]]
-    else:   #but if the second address component DOES start with a numeriuc character, rejoice! We will ignore the first component and see how we go.
+    else:   #but if the second address component DOES start with a numeric character, rejoice! We will ignore the first component and see how we go.
         first_part = row[address_column_indices[1]]
 
-    if not first_part[0].isnumeric():
+    if TRY_TO_CUT_DOWN_START_OF_STRING and not first_part[0].isnumeric(): #and this bit cuts away stuff like 'unit' and 'apartment', but as commented after the constant definition, it doesn't really help in practice
         index_of_first_numeric_digit_in_first_half = get_index_of_last_number_in_string_but_not_near_the_end(first_part)
         if not index_of_first_numeric_digit_in_first_half == -1:
             #print("Correcting from "+first_part)
@@ -92,6 +106,18 @@ def print_best_match_summary(best_scorer, original_address):
     print("From string similarity comparison with the Bham address list, we have reckoned that "+best_scorer+" was the best match for "+original_address) 
    
 def query_nominatim(address):
+
+    if LOCAL_NOMINATIM_EXISTS: #the ideal scenario where we perform a local nominatim search rather than having to use the API!
+        with napi.NominatimAPI(environ=config_params) as api:
+            results = api.search(address)
+            print(address)
+            print(results)
+            if len(results) > 0:
+                print("A local nominatim check seems to have succeeded")
+                return {"Latitude":results[0].centroid.y, "Longitude":results[0].centroid.x}
+            else:
+                print("A local nominatim check failed, resorting to remote nominatim check")
+    
     json = construct_and_query_nominatim_url(address)
     
     if json == None or len(json) == 0:
@@ -165,6 +191,9 @@ def isolate_address_beginning_with_house_number(address_string):
 
     while address_string[pos].isnumeric() and pos > 0:
         pos -= 1
+
+    if pos < 0:
+        pos = 0
 
     print("Used to be: "+address_string)
     address_string = address_string[pos:].strip()
@@ -446,7 +475,7 @@ if not abort:
                 else:
                     if verbose:
                         print("Asking nominatim as a fallback...")
-                    best_scorer = query_nominatim(full_addr_for_row)
+                    best_scorer = query_nominatim(full_addr_for_row.replace(",","").strip())
                     if verbose:
                         print("Here's what we got from nominatim: "+str(latitude) +" "+str(longitude)+" for "+full_addr_for_row)
                     latitude = best_scorer.get("Latitude")

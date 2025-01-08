@@ -13,11 +13,11 @@ def makeBoundsIntoGeoJsonFormatPolygon(topLeft,bottomRight):
 
 TIMESTAMP_STRING = None
 
-#TEMPLATE THAT THE REAL ONE MAY DERIVE FROM LATER
+#TEMPLATES THAT THE REAL ONE MAY DERIVE FROM LATER
 ENTIRE_BHAM_TOPLEFT_EASTING_NORTHING = WGS84toOSGB36(52.625, -2.15)
 ENTIRE_BHAM_BOTTOMRIGHT_EASTING_NORTHING = WGS84toOSGB36(52.3, -1.575)
 
-#TEMPLATE THAT THE REAL ONE MAY DERIVE FROM LATER
+#TEMPLATES THAT THE REAL ONE MAY DERIVE FROM LATER
 EASTBHAM_TOPLEFT_EASTING_NORTHING = [407884,295228]
 EASTBHAM_BOTTOMRIGHT_EASTING_NORTHING = [419948,276214]
 
@@ -201,7 +201,7 @@ def process():
 
             efficient_grid_square = geojson.Feature(
                 geometry=grid_square.geometry,
-                properties = {
+                properties = {                    
                     "Sector frequencies":sectorFrequencies,
                     "Freq of modal sector(s)":biggest_freq,                
                     "Modal sector(s)":modes,
