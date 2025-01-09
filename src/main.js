@@ -408,7 +408,7 @@ function showInformationAboutBusiness(businessId){
     document.getElementById("link-td").innerHTML = makeAnchorTagString(company_number, "https://find-and-update.company-information.service.gov.uk/company/" + (company_number+"").padStart(8, '0') +"\"", true);
     document.getElementById("nature-of-business-td").innerText = industries_all[parseInt(getColumnValueForBusiness(business,"industry"))];
     document.getElementById("incorporated-td").innerText = getColumnValueForBusiness(business,"IncorporationDate")
-    document.getElementById("address-td").innerHTML = makeAnchorTagString(address,"https://www.google.co.uk/maps/search/"+address.replaceAll(" ","+"), true);
+    //document.getElementById("address-td").innerHTML = makeAnchorTagString(address,"https://www.google.co.uk/maps/search/"+address.replaceAll(" ","+"), true);
     document.getElementById("position-td").innerText = roundToDP(getColumnValueForBusiness(business,"Latitude"),6) + ", " + roundToDP(getColumnValueForBusiness(business,"Longitude"),6);
     document.getElementById("type-td").innerText = getColumnValueForBusiness(business,"CompanyCategory");
     document.getElementById("status-td").innerText = getColumnValueForBusiness(business,"CompanyStatus");

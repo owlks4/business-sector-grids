@@ -13,6 +13,8 @@ The business density portrayed by this program can sometimes be skewed by many s
 
 To combat this, consider right-clicking any offending squares to exclude them from the colour calculations.
 
+Also, by default, addresses are blanked during grid generation. To change this, change BLANK_ADDRESSES in _4_create_grid.py to False.
+
 
 ## How to regenerate the dataset
 

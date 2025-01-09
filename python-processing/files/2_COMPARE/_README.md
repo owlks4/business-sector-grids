@@ -1,1 +1,0 @@
-The file 'data_for_step_2.csv' seen here should be obtained from Companies House using ch-spreadsheet-updater.

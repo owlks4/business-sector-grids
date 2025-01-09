@@ -13,6 +13,8 @@ def makeBoundsIntoGeoJsonFormatPolygon(topLeft,bottomRight):
 
 TIMESTAMP_STRING = None
 
+BLANK_ADDRESSES = True
+
 #TEMPLATES THAT THE REAL ONE MAY DERIVE FROM LATER
 ENTIRE_BHAM_TOPLEFT_EASTING_NORTHING = WGS84toOSGB36(52.625, -2.15)
 ENTIRE_BHAM_BOTTOMRIGHT_EASTING_NORTHING = WGS84toOSGB36(52.3, -1.575)
@@ -23,8 +25,10 @@ EASTBHAM_BOTTOMRIGHT_EASTING_NORTHING = [419948,276214]
 
 print("\nStarting step 4.\n")
 
+output_path = "../src/BusinessSectorGrids/" # which is then immediately amended with the correct filename, depending on which grid resolution the user is about to choose...
+
 interval_response = 0
-print("We're going to make some sector grids; what should be the resolution (metres) of the grid? A good value is 1000, but you might also want to go to 500 or 250.")
+print("We're going to make a sector grid; what should be the resolution (metres) of the grid? A good value is 1000, but you might also want to go to 500 or 250. The output will be placed in "+output_path)
 
 while (interval_response == 0):
     interval_response = input("Input it here: ")
@@ -39,6 +43,7 @@ while (interval_response == 0):
         interval_response = 0
 
 GRID_INTERVAL_METRES = int(interval_response)
+output_path += "output_grid_with_interval_"+str(GRID_INTERVAL_METRES)+".geojson"
 
 #THE REAL ONE THAT IS ACTUALLY USED IN THE CALCULATION
 BNG_TOPLEFT_EASTING_NORTHING = ENTIRE_BHAM_TOPLEFT_EASTING_NORTHING
@@ -90,6 +95,17 @@ def process():
     longitude_column_index = rows[0].index("Longitude")
     incorporation_date_column_index = rows[0].index("IncorporationDate")
     dissolution_date_column_index = rows[0].index("DissolutionDate")
+
+    if BLANK_ADDRESSES:
+        blankable_indices = [
+            rows[0].index("RegAddress.CareOf"), rows[0].index("RegAddress.POBox"), rows[0].index("RegAddress.AddressLine1"), rows[0].index("RegAddress.AddressLine2"),
+            rows[0].index("RegAddress.PostTown"), rows[0].index("RegAddress.County"), rows[0].index("RegAddress.Country"), rows[0].index("RegAddress.PostCode")
+        ]
+
+        for i in range(1,len(rows)):
+            for blankable_index in blankable_indices:        
+                rows[i][blankable_index] = ""
+
     old_sic_code_column_indices = [rows[0].index("SICCode.SicText_1"),rows[0].index("SICCode.SicText_2"),rows[0].index("SICCode.SicText_3"),rows[0].index("SICCode.SicText_4")]
 
     num_processed_since_last_skip = 0
@@ -225,8 +241,6 @@ def process():
             "industries_all":industries_all
             }
         );
-
-    output_path = "files/4_CREATE_GRID/output_grid_with_interval_"+str(GRID_INTERVAL_METRES)+".geojson"
 
     if os.path.isfile(output_path):
         os.remove(output_path)
